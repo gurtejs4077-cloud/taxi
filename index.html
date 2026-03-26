@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dispatch Admin</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:#080c14;--surface:#0f1623;--border:#1c2535;
+      --accent:#f97316;--accent2:#3b82f6;
+      --success:#22c55e;--warning:#f59e0b;--danger:#ef4444;
+      --muted:#4b5a72;--text:#e2ecf8;--subtext:#8496b0;
+      --sidebar-w:340px;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;height:100vh;display:flex;overflow:hidden}
+    #sidebar{width:var(--sidebar-w);min-width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+    #sidebar-header{padding:18px 20px 14px;border-bottom:1px solid var(--border);flex-shrink:0}
+    .logo{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+    .logo-icon{width:36px;height:36px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem}
+    #sidebar-header h1{font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:800;color:#fff;letter-spacing:-.5px}
+    #admin-email{font-size:.72rem;color:var(--subtext);margin-top:2px}
+    #btn-logout{background:transparent;border:1px solid var(--border);border-radius:7px;color:var(--subtext);font-family:'DM Sans',sans-serif;font-size:.73rem;padding:5px 10px;cursor:pointer;margin-top:8px;transition:border-color .2s,color .2s}
+    #btn-logout:hover{border-color:var(--danger);color:var(--danger)}
+    #stats-bar{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+    .stat-pill{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 8px;text-align:center}
+    .stat-pill .num{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800;line-height:1}
+    .stat-pill .lbl{font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--subtext);margin-top:3px}
+    .num.green{color:var(--success)}.num.orange{color:var(--accent)}.num.blue{color:var(--accent2)}
+    #tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+    .tab-btn{flex:1;background:none;border:none;border-bottom:2px solid transparent;color:var(--subtext);font-family:'DM Sans',sans-serif;font-size:.75rem;font-weight:600;padding:11px 4px;cursor:pointer;transition:color .2s,border-color .2s;text-transform:uppercase;letter-spacing:.07em}
+    .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+    .tab-panel{display:none;flex:1;overflow-y:auto;padding:16px;flex-direction:column;gap:18px}
+    .tab-panel.active{display:flex}
+    .tab-panel::-webkit-scrollbar{width:4px}
+    .tab-panel::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+    .section-title{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:10px}
+    #ride-form{display:flex;flex-direction:column;gap:10px}
+    .input-wrap{position:relative}
+    .input-wrap .icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:.9rem;pointer-events:none}
+    .input-wrap input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.9rem;padding:11px 12px 11px 34px;outline:none;transition:border-color .2s,box-shadow .2s}
+    .input-wrap input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(249,115,22,.15)}
+    .input-wrap input::placeholder{color:var(--muted)}
+    #btn-create-ride{background:var(--accent);color:#fff;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:600;padding:12px;cursor:pointer;transition:opacity .2s,transform .1s;display:flex;align-items:center;justify-content:center;gap:8px}
+    #btn-create-ride:hover{opacity:.9}#btn-create-ride:active{transform:scale(.98)}#btn-create-ride:disabled{opacity:.4;cursor:not-allowed}
+    #form-msg{font-size:.8rem;color:var(--subtext);text-align:center;min-height:18px}
+    #driver-list,#rides-list,#history-list{display:flex;flex-direction:column;gap:8px}
+    .driver-card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:11px 13px;display:flex;align-items:center;gap:10px;transition:border-color .2s;cursor:pointer}
+    .driver-card:hover{border-color:var(--muted)}
+    .driver-avatar{width:34px;height:34px;background:var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+    .driver-info{flex:1;min-width:0}
+    .driver-name{font-weight:600;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .driver-coords{font-size:.72rem;color:var(--subtext);margin-top:1px}
+    .badge{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:4px 8px;border-radius:20px;flex-shrink:0}
+    .badge.available{background:rgba(34,197,94,.15);color:var(--success)}
+    .badge.busy{background:rgba(245,158,11,.15);color:var(--warning)}
+    .badge.offline{background:rgba(75,90,114,.2);color:var(--muted)}
+    .ride-card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:11px 13px;animation:slideIn .3s ease}
+    @keyframes slideIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+    .ride-route{display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:500;margin-bottom:7px;color:var(--text)}
+    .ride-route .arrow{color:var(--muted);font-size:.75rem}
+    .ride-meta{display:flex;align-items:center;justify-content:space-between}
+    .ride-driver{font-size:.72rem;color:var(--subtext)}
+    .status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}
+    .ride-status{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center}
+    .s-pending .status-dot{background:var(--muted)}.s-assigned .status-dot{background:var(--accent2);box-shadow:0 0 6px rgba(59,130,246,.6)}
+    .s-ongoing .status-dot{background:var(--success);box-shadow:0 0 6px rgba(34,197,94,.6)}.s-rejected .status-dot{background:var(--danger)}.s-completed .status-dot{background:var(--muted)}
+    .s-pending .ride-status{color:var(--subtext)}.s-assigned .ride-status{color:var(--accent2)}.s-ongoing .ride-status{color:var(--success)}.s-rejected .ride-status{color:var(--danger)}.s-completed .ride-status{color:var(--muted)}
+    #history-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    #history-total{font-size:.76rem;color:var(--subtext);margin-top:3px}
+    #btn-export-csv{background:var(--accent2);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.78rem;font-weight:600;padding:7px 13px;cursor:pointer;transition:opacity .2s}
+    #btn-export-csv:hover{opacity:.85}
+    .history-item{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:11px 13px;animation:slideIn .25s ease}
+    .history-route-row{display:flex;align-items:center;gap:6px;font-size:.88rem;font-weight:600;margin-bottom:5px}
+    .history-meta-row{display:flex;gap:12px;font-size:.72rem;color:var(--subtext)}
+    #map-container{flex:1;position:relative}
+    #map{width:100%;height:100%}
+    .leaflet-tile{filter:brightness(.7) saturate(.6)}
+    #map-overlay{position:absolute;top:16px;right:16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px;font-size:.78rem;color:var(--subtext);z-index:500;pointer-events:none}
+    #map-overlay strong{display:block;font-family:'Syne',sans-serif;font-size:.85rem;color:var(--text);margin-bottom:3px}
+    .empty-state{text-align:center;color:var(--muted);font-size:.82rem;padding:16px 0}
+    #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:10px;padding:12px 20px;font-size:.85rem;font-weight:500;color:var(--text);z-index:9999;transition:transform .3s cubic-bezier(.34,1.56,.64,1);white-space:nowrap}
+    #toast.show{transform:translateX(-50%) translateY(0)}
+  </style>
+</head>
+<body>
+
+<div id="sidebar">
+  <div id="sidebar-header">
+    <div class="logo">
+      <div class="logo-icon">🚦</div>
+      <div><h1>Dispatch</h1><div id="admin-email">Loading…</div></div>
+    </div>
+    <button id="btn-logout">Sign Out</button>
+  </div>
+
+  <div id="stats-bar">
+    <div class="stat-pill"><div class="num green"  id="stat-available">0</div><div class="lbl">Available</div></div>
+    <div class="stat-pill"><div class="num orange" id="stat-busy">0</div><div class="lbl">Busy</div></div>
+    <div class="stat-pill"><div class="num blue"   id="stat-rides">0</div><div class="lbl">Total</div></div>
+  </div>
+
+  <div id="tabs">
+    <button class="tab-btn active" data-tab="dispatch">🚖 Dispatch</button>
+    <button class="tab-btn"        data-tab="drivers">👥 Drivers</button>
+    <button class="tab-btn"        data-tab="history">📋 History</button>
+  </div>
+
+  <div class="tab-panel active" id="tab-dispatch">
+    <div>
+      <div class="section-title">New Ride</div>
+      <div id="ride-form">
+        <div class="input-wrap"><span class="icon">📍</span><input type="text" id="input-pickup" placeholder="Pickup location"/></div>
+        <div class="input-wrap"><span class="icon">🏁</span><input type="text" id="input-drop"   placeholder="Drop location"/></div>
+        <button id="btn-create-ride"><span>＋</span> Dispatch Ride</button>
+        <div id="form-msg"></div>
+      </div>
+    </div>
+    <div>
+      <div class="section-title">Live Rides</div>
+      <div id="rides-list"><div class="empty-state">No rides yet.</div></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-drivers">
+    <div class="section-title">All Drivers</div>
+    <div id="driver-list"><div class="empty-state">No drivers online.</div></div>
+  </div>
+
+  <div class="tab-panel" id="tab-history">
+    <div>
+      <div id="history-toolbar">
+        <div><div class="section-title" style="margin:0">Completed Rides</div><div id="history-total">0 rides</div></div>
+        <button id="btn-export-csv">⬇ Export CSV</button>
+      </div>
+      <div id="history-list"><div class="empty-state">No completed rides yet.</div></div>
+    </div>
+  </div>
+</div>
+
+<div id="map-container">
+  <div id="map"></div>
+  <div id="map-overlay"><strong>Live Fleet Map</strong>Real-time driver positions</div>
+</div>
+<div id="toast"></div>
+
+<script type="module">
+  import { requireAuth, logoutUser, db } from "./auth.js";
+  import {
+    collection, doc, setDoc, updateDoc, getDocs,
+    onSnapshot, query, where, orderBy, serverTimestamp,
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  // ── Auth guard (admin only) ───────────────────────────
+  const { user, email } = await requireAuth("admin");
+  document.getElementById("admin-email").textContent = email || user.email;
+
+  document.getElementById("btn-logout").addEventListener("click", async () => {
+    await logoutUser(); window.location.href = "login.html";
+  });
+
+  // ── Tabs ──────────────────────────────────────────────
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+    });
+  });
+
+  // ── Map ───────────────────────────────────────────────
+  const map = L.map("map").setView([30.9, 75.85], 12);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap contributors" }).addTo(map);
+  const driverMarkers = {};
+
+  function toast(msg, color="var(--accent)") {
+    const el = document.getElementById("toast");
+    el.textContent = msg; el.style.borderLeftColor = color;
+    el.classList.add("show"); setTimeout(() => el.classList.remove("show"), 3000);
+  }
+
+  let sAvail=0, sBusy=0, sRides=0;
+  function updateStats() {
+    document.getElementById("stat-available").textContent = sAvail;
+    document.getElementById("stat-busy").textContent      = sBusy;
+    document.getElementById("stat-rides").textContent     = sRides;
+  }
+
+  // ── Drivers listener ──────────────────────────────────
+  onSnapshot(collection(db, "drivers"), (snap) => {
+    const list = document.getElementById("driver-list");
+    list.innerHTML = ""; sAvail=0; sBusy=0;
+    if (snap.empty) { list.innerHTML='<div class="empty-state">No drivers online.</div>'; updateStats(); return; }
+
+    snap.forEach((d) => {
+      const id     = d.id;
+      const data   = d.data();
+      const status = data.status || "offline";
+      const loc    = data.location;
+      // Show email if stored, otherwise fallback to uid
+      const displayName = data.email || id;
+
+      if (status === "available") sAvail++;
+      if (status === "busy")      sBusy++;
+
+      // Map marker
+      if (loc) {
+        const { lat, lng } = loc;
+        const markerHtml = `<div style="background:${status==="available"?"#22c55e":status==="busy"?"#f59e0b":"#4b5a72"};width:14px;height:14px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 8px rgba(0,0,0,.4)"></div>`;
+        if (driverMarkers[id]) {
+          driverMarkers[id].setLatLng([lat, lng]);
+          driverMarkers[id].getPopup().setContent(`<b>${displayName}</b><br>${status}`);
+          const dot = driverMarkers[id].getElement()?.querySelector("div");
+          if (dot) dot.style.background = status==="available"?"#22c55e":status==="busy"?"#f59e0b":"#4b5a72";
+        } else {
+          driverMarkers[id] = L.marker([lat, lng], {
+            icon: L.divIcon({ className:"", html: markerHtml, iconSize:[14,14], iconAnchor:[7,7] })
+          }).addTo(map).bindPopup(`<b>${displayName}</b><br>${status}`);
+        }
+      }
+
+      // Sidebar card
+      const card = document.createElement("div");
+      card.className = "driver-card";
+      card.innerHTML = `
+        <div class="driver-avatar">🧑</div>
+        <div class="driver-info">
+          <div class="driver-name">${displayName}</div>
+          <div class="driver-coords">${loc ? `${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}` : "No GPS yet"}</div>
+        </div>
+        <span class="badge ${status}">${status}</span>`;
+      card.addEventListener("click", () => { if (loc) map.flyTo([loc.lat, loc.lng], 16); });
+      list.appendChild(card);
+    });
+    updateStats();
+  });
+
+  // ── Live rides listener ───────────────────────────────
+  onSnapshot(query(collection(db,"rides"), orderBy("createdAt","desc")), (snap) => {
+    sRides = snap.size; updateStats();
+    const list = document.getElementById("rides-list");
+    list.innerHTML = "";
+    if (snap.empty) { list.innerHTML='<div class="empty-state">No rides yet.</div>'; return; }
+    snap.forEach((d) => {
+      const r = d.data(), status = r.status || "pending";
+      const card = document.createElement("div");
+      card.className = `ride-card s-${status}`;
+      // Show driver email if available via driverEmail field, else driverId
+      const driverLabel = r.driverEmail || r.driverId || "Unassigned";
+      card.innerHTML = `
+        <div class="ride-route"><span>📍 ${r.pickup||"—"}</span><span class="arrow">→</span><span>🏁 ${r.drop||"—"}</span></div>
+        <div class="ride-meta">
+          <span class="ride-driver">${r.driverId ? `Driver: ${driverLabel}` : "Unassigned"}</span>
+          <span class="ride-status"><span class="status-dot"></span>${status}</span>
+        </div>`;
+      list.appendChild(card);
+    });
+  });
+
+  // ── History listener ──────────────────────────────────
+  let historyData = [];
+  onSnapshot(
+    query(collection(db,"rides"), where("status","==","completed"), orderBy("completedAt","desc")),
+    (snap) => {
+      historyData = [];
+      const list = document.getElementById("history-list");
+      document.getElementById("history-total").textContent = `${snap.size} ride${snap.size!==1?"s":""}`;
+      list.innerHTML = "";
+      if (snap.empty) { list.innerHTML='<div class="empty-state">No completed rides yet.</div>'; return; }
+      snap.forEach((d) => {
+        const r    = d.data();
+        const date = r.completedAt?.toDate ? r.completedAt.toDate().toLocaleString() : "—";
+        const driver = r.driverEmail || r.driverId || "Unknown";
+        historyData.push({ pickup: r.pickup||"", drop: r.drop||"", driver, completed: date });
+        const item = document.createElement("div");
+        item.className = "history-item";
+        item.innerHTML = `
+          <div class="history-route-row">
+            <span>📍 ${r.pickup||"—"}</span>
+            <span style="color:var(--muted)">→</span>
+            <span>🏁 ${r.drop||"—"}</span>
+          </div>
+          <div class="history-meta-row">
+            <span>🧑 ${driver}</span>
+            <span>🕐 ${date}</span>
+          </div>`;
+        list.appendChild(item);
+      });
+    }
+  );
+
+  // ── CSV Export ────────────────────────────────────────
+  document.getElementById("btn-export-csv").addEventListener("click", () => {
+    if (!historyData.length) { toast("No completed rides to export.", "var(--warning)"); return; }
+    const csv = [
+      "Pickup,Drop,Driver,Completed At",
+      ...historyData.map(r => [r.pickup, r.drop, r.driver, r.completed].map(v => `"${v}"`).join(","))
+    ].join("\n");
+    const a = Object.assign(document.createElement("a"), {
+      href:     URL.createObjectURL(new Blob([csv], { type: "text/csv" })),
+      download: `rides_${new Date().toISOString().slice(0,10)}.csv`,
+    });
+    a.click();
+    toast("CSV exported ✓", "var(--success)");
+  });
+
+  // ── Create Ride ───────────────────────────────────────
+  document.getElementById("btn-create-ride").addEventListener("click", async () => {
+    const pickup = document.getElementById("input-pickup").value.trim();
+    const drop   = document.getElementById("input-drop").value.trim();
+    const msg    = document.getElementById("form-msg");
+    const btn    = document.getElementById("btn-create-ride");
+
+    if (!pickup || !drop) { msg.textContent="⚠️ Enter both locations."; msg.style.color="var(--warning)"; return; }
+    btn.disabled = true; btn.textContent = "Dispatching…"; msg.textContent = "";
+
+    try {
+      // Find available driver (not offline)
+      const snap = await getDocs(query(collection(db,"drivers"), where("status","==","available")));
+      const ref  = doc(collection(db, "rides"));
+
+      if (snap.empty) {
+        await setDoc(ref, { pickup, drop, status: "pending", driverId: null, createdAt: serverTimestamp() });
+        msg.textContent = "⏳ Queued — no drivers available."; msg.style.color = "var(--subtext)";
+        toast("No drivers — ride queued", "var(--warning)");
+      } else {
+        const driverDoc  = snap.docs[0];
+        const assignedId = driverDoc.id;
+        const driverData = driverDoc.data();
+
+        await setDoc(ref, {
+          pickup, drop,
+          status:      "assigned",
+          driverId:    assignedId,
+          driverEmail: driverData.email || assignedId,  // ← store email for display
+          createdAt:   serverTimestamp(),
+        });
+        await updateDoc(doc(db, "drivers", assignedId), { status: "busy" });
+
+        const label = driverData.email || assignedId;
+        msg.textContent = `✅ Assigned to ${label}`; msg.style.color = "var(--success)";
+        toast(`Dispatched → ${label}`, "var(--success)");
+        document.getElementById("input-pickup").value = "";
+        document.getElementById("input-drop").value   = "";
+      }
+    } catch(e) {
+      msg.textContent = "❌ Error. Check console."; msg.style.color = "var(--danger)";
+      console.error(e);
+    }
+    btn.disabled = false; btn.innerHTML = "<span>＋</span> Dispatch Ride";
+  });
+
+  ["input-pickup","input-drop"].forEach(id => {
+    document.getElementById(id).addEventListener("keydown", e => { if (e.key==="Enter") document.getElementById("btn-create-ride").click(); });
+  });
+</script>
+</body>
+</html>

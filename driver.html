@@ -281,7 +281,7 @@
   import { requireAuth, logoutUser, db } from "./auth.js";
   import {
     collection, doc,
-    setDoc, updateDoc, getDoc,
+    setDoc, updateDoc, getDoc, runTransaction,
     onSnapshot, query, where, orderBy, serverTimestamp,
   } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
@@ -341,20 +341,38 @@
   let activeRideId   = null;
 
   function startRideListener() {
-    // Assigned rides → popup
+    // ── BROADCAST rides ────────────────────────────────────────────────────
+    // Listens for rides with status:"broadcast" (driverId is null).
+    // ALL drivers see these — customer phone number shown prominently.
+    // Accept uses a Firestore transaction so only ONE driver can claim it.
     onSnapshot(
-      query(collection(db, "rides"), where("driverId", "==", driverId), where("status", "==", "assigned")),
+      query(collection(db, "rides"), where("status", "==", "broadcast")),
       (snap) => {
         snap.docChanges().forEach(({ type, doc: d }) => {
           const ride = d.data();
-          if ((type === "added" || type === "modified") && ride.status === "assigned" && !shownRideIds.has(d.id)) {
+          // Show popup for new broadcast rides (not already shown, not already claimed)
+          if (
+            (type === "added" || type === "modified") &&
+            ride.status === "broadcast" &&
+            !shownRideIds.has(d.id)
+          ) {
             shownRideIds.add(d.id);
             showRidePopup(d.id, ride);
           }
+          // If someone else claimed it — auto-dismiss popup if still showing
+          if (type === "modified" && ride.status !== "broadcast") {
+            const popup = document.getElementById("ride-popup");
+            if (popup && popup.dataset.rideId === d.id) {
+              closePopup(d.id);
+              showClaimedToast();
+            }
+          }
         });
-      }
+      },
+      (err) => console.error("[Broadcast listener]", err.message)
     );
-    // Ongoing rides → Complete button
+
+    // ── ONGOING rides for THIS driver → show Complete button ───────────────
     onSnapshot(
       query(collection(db, "rides"), where("driverId", "==", driverId), where("status", "==", "ongoing")),
       (snap) => {
@@ -369,8 +387,24 @@
           document.getElementById("active-ride-card").classList.remove("visible");
           activeRideId = null;
         }
-      }
+      },
+      (err) => console.error("[Ongoing listener]", err.message)
     );
+  }
+
+  // Small toast when another driver claimed the ride first
+  function showClaimedToast() {
+    const t = document.createElement("div");
+    t.textContent = "⚡ Ride claimed by another driver";
+    t.style.cssText = `
+      position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+      background:#18181f;border:1px solid #242430;border-left:3px solid #f59e0b;
+      border-radius:12px;padding:12px 20px;font-size:14px;font-weight:600;
+      color:#f1f1f8;z-index:9999;white-space:nowrap;
+      animation:fadeUp .3s ease;
+    `;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
   }
 
   document.getElementById("btn-complete-ride").addEventListener("click", async () => {
@@ -488,45 +522,104 @@
   function showRidePopup(rideId, ride) {
     document.getElementById("ride-popup")?.remove();
     const popup = document.createElement("div");
-    popup.id    = "ride-popup";
+    popup.id             = "ride-popup";
+    popup.dataset.rideId = rideId;  // used to auto-dismiss when claimed by someone else
+
+    // Phone shown as a big tap-to-call button at the top
+    const phoneBtn = ride.customerPhone
+      ? `<a href="tel:${ride.customerPhone}" style="
+            display:flex;align-items:center;justify-content:center;gap:8px;
+            background:rgba(16,185,129,.12);border:1.5px solid rgba(16,185,129,.35);
+            border-radius:12px;padding:13px;margin-bottom:14px;
+            color:#10b981;font-size:17px;font-weight:700;text-decoration:none;
+          ">📞 ${ride.customerPhone}</a>`
+      : "";
+
     popup.innerHTML = `
       <div id="ride-popup-overlay">
         <div id="ride-popup-box">
-          <div id="ride-popup-header"><div class="popup-icon">🚖</div><h2>${ride.isScheduled ? "Scheduled Ride" : "New Ride Request"}</h2></div>
+          <div id="ride-popup-header">
+            <div class="popup-icon">🚖</div>
+            <h2>${ride.isScheduled ? "⏰ Scheduled Ride" : "🔔 New Ride!"}</h2>
+          </div>
           <div id="ride-popup-body">
-            ${ride.customerName ? `<div class="popup-stop" style="margin-bottom:8px"><div class="lbl">👤 Customer</div><div class="val">${ride.customerName}</div></div>` : ""}
-            ${ride.customerPhone ? `<div class="popup-stop" style="margin-bottom:8px"><div class="lbl">📞 Phone</div><div class="val"><a href="tel:${ride.customerPhone}" style="color:#10b981;text-decoration:none">${ride.customerPhone}</a></div></div>` : ""}
-            ${ride.isScheduled && ride.scheduledAt ? `<div class="popup-stop" style="margin-bottom:8px;background:rgba(99,102,241,.1);border-radius:8px;padding:8px"><div class="lbl" style="color:#818cf8">📅 Scheduled for</div><div class="val" style="color:#c7d2fe">${new Date(ride.scheduledAt).toLocaleString([],{dateStyle:"medium",timeStyle:"short"})}</div></div>` : ""}
-            <div class="popup-stop"><div class="lbl">📍 Pickup</div><div class="val">${ride.pickup||"N/A"}</div></div>
+            ${phoneBtn}
+            ${ride.customerName ? `<div class="popup-stop" style="margin-bottom:10px"><div class="lbl">👤 Customer</div><div class="val">${ride.customerName}</div></div>` : ""}
+            ${ride.isScheduled && ride.scheduledAt ? `<div class="popup-stop" style="margin-bottom:10px;background:rgba(99,102,241,.1);border-radius:10px;padding:10px 12px"><div class="lbl" style="color:#818cf8">📅 Scheduled for</div><div class="val" style="color:#c7d2fe;font-size:15px">${new Date(ride.scheduledAt).toLocaleString([],{dateStyle:"medium",timeStyle:"short"})}</div></div>` : ""}
+            <div class="popup-stop" style="margin-bottom:6px"><div class="lbl">📍 Pickup</div><div class="val">${ride.pickup||"N/A"}</div></div>
             <div class="popup-arrow">↓</div>
             <div class="popup-stop"><div class="lbl">🏁 Drop</div><div class="val">${ride.drop||"N/A"}</div></div>
           </div>
           <div id="ride-popup-actions">
-            <button class="popup-btn accept" id="pop-accept">✅ Accept</button>
-            <button class="popup-btn reject" id="pop-reject">❌ Reject</button>
+            <button class="popup-btn accept" id="pop-accept">✅ Accept Ride</button>
+            <button class="popup-btn reject" id="pop-reject">✕ Skip</button>
           </div>
         </div>
       </div>`;
     document.body.appendChild(popup);
 
+    // ── Accept: use Firestore transaction to prevent race condition ──────────
+    // If two drivers tap Accept at the same time, only the FIRST one succeeds.
+    // The second driver sees "Claimed by another driver" toast instead.
     document.getElementById("pop-accept").onclick = async () => {
-      await updateDoc(doc(db,"rides",rideId), { status:"ongoing" });
-      await setDoc(doc(db,"drivers",driverId), { status:"busy" }, merge);
-      if (ride.requestId) {
-        try { await updateDoc(doc(db,"ride_requests",ride.requestId),{status:"ongoing"}); } catch(e){}
+      const acceptBtn = document.getElementById("pop-accept");
+      acceptBtn.disabled    = true;
+      acceptBtn.textContent = "Claiming…";
+
+      try {
+        let alreadyClaimed = false;
+
+        await runTransaction(db, async (tx) => {
+          const rideSnap = await tx.get(doc(db, "rides", rideId));
+          if (!rideSnap.exists()) throw new Error("Ride not found");
+
+          const rideData = rideSnap.data();
+
+          // If status is no longer "broadcast", someone else already claimed it
+          if (rideData.status !== "broadcast") {
+            alreadyClaimed = true;
+            return; // abort transaction gracefully
+          }
+
+          // Claim the ride atomically
+          tx.update(doc(db, "rides", rideId), {
+            status:      "ongoing",
+            driverId:    driverId,
+            driverEmail: email || driverId,
+          });
+        });
+
+        if (alreadyClaimed) {
+          closePopup(rideId);
+          showClaimedToast();
+          return;
+        }
+
+        // Mark driver busy + update customer request
+        await setDoc(doc(db, "drivers", driverId), { status: "busy" }, merge);
+        if (ride.requestId) {
+          try {
+            await updateDoc(doc(db, "ride_requests", ride.requestId), {
+              status:      "ongoing",
+              driverId:    driverId,
+              driverEmail: email || driverId,
+            });
+          } catch(e) {}
+        }
+        updateStatusUI("busy");
+        closePopup(rideId);
+
+      } catch(err) {
+        console.error("[Accept transaction]", err.message);
+        acceptBtn.disabled    = false;
+        acceptBtn.textContent = "✅ Accept Ride";
       }
-      updateStatusUI("busy");
-      closePopup(rideId);
     };
 
-    document.getElementById("pop-reject").onclick = async () => {
-      await updateDoc(doc(db,"rides",rideId), { status:"rejected", driverId:null });
-      await setDoc(doc(db,"drivers",driverId), { status:"available" }, merge);
-      if (ride.requestId) {
-        try { await updateDoc(doc(db,"ride_requests",ride.requestId),{status:"pending",driverId:null}); } catch(e){}
-      }
-      updateStatusUI("available");
+    // ── Skip / Reject: just dismiss popup, ride stays broadcast for others ──
+    document.getElementById("pop-reject").onclick = () => {
       closePopup(rideId);
+      // Don't change Firestore — other drivers can still accept
     };
   }
 

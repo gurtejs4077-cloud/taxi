@@ -2,470 +2,939 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
-  <title>RideApp — Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Dispatch Admin</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
   <style>
-    :root{
-      --bg:#0a0a0f;--surface:#13131a;--card:#1a1a24;--border:#252535;
-      --accent:#f59e0b;--accent-d:#d97706;
-      --blue:#6366f1;--success:#10b981;--warning:#f59e0b;--danger:#f43f5e;
-      --text:#f0f0f8;--sub:#7c7c9a;--muted:#2e2e40;
-      --sidebar-w:360px;
-    }
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    html,body{height:100%;-webkit-tap-highlight-color:transparent}
-    body{background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;overflow:hidden}
-
-    #shell{display:flex;height:100vh;width:100vw}
-    #sidebar{width:var(--sidebar-w);min-width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;transition:transform .3s}
-    #map-area{flex:1;position:relative;min-width:0}
-    #map{width:100%;height:100%}
-    .leaflet-tile{filter:brightness(.65) saturate(.5)}
-    #map-toggle{display:none;position:absolute;bottom:20px;right:16px;z-index:500;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px 14px;font-size:.8rem;font-weight:700;color:var(--text);cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.4)}
-
-    @media(max-width:700px){
-      #shell{flex-direction:column}
-      #sidebar{width:100%;min-width:0;flex:1;border-right:none;border-bottom:1px solid var(--border)}
-      #map-area{height:200px;flex:none;order:-1}
-      #map-toggle{display:flex;align-items:center;gap:6px}
-      body.map-open #map-area{height:55vh}
-      body.map-open #sidebar{flex:none;height:45vh}
+    /* ══════════════════════════════════════════
+       DESIGN TOKENS
+    ══════════════════════════════════════════ */
+    :root {
+      --bg:       #09090f;
+      --surface:  #111118;
+      --card:     #18181f;
+      --border:   #242430;
+      --accent:   #f59e0b;
+      --accent2:  #6366f1;
+      --green:    #10b981;
+      --red:      #f43f5e;
+      --orange:   #f59e0b;
+      --text:     #f1f1f8;
+      --sub:      #6b6b85;
+      --muted:    #2a2a38;
+      --radius:   14px;
     }
 
-    /* Header */
-    #hdr{padding:14px 16px 11px;border-bottom:1px solid var(--border);flex-shrink:0}
-    .hdr-r{display:flex;align-items:center;justify-content:space-between}
-    .logo-r{display:flex;align-items:center;gap:9px}
-    .lm{width:30px;height:30px;background:linear-gradient(135deg,var(--accent),var(--accent-d));border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:.85rem}
-    #hdr h1{font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:800;color:#fff}
-    #ae{font-size:.68rem;color:var(--sub);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px}
-    #bl{background:transparent;border:1px solid var(--border);border-radius:7px;color:var(--sub);font-family:'Plus Jakarta Sans',sans-serif;font-size:.7rem;font-weight:600;padding:6px 11px;cursor:pointer;transition:border-color .2s,color .2s}
-    #bl:hover{border-color:var(--danger);color:var(--danger)}
-
-    /* Stats */
-    #stats{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;padding:9px 12px;border-bottom:1px solid var(--border);flex-shrink:0}
-    .sp{background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:7px 5px;text-align:center}
-    .sp .n{font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:800;line-height:1}
-    .sp .l{font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--sub);margin-top:2px}
-    .ng{color:var(--success)}.no{color:var(--accent)}.nb{color:var(--blue)}.nr{color:var(--danger)}
-
-    /* Tabs */
-    #tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto}
-    #tabs::-webkit-scrollbar{display:none}
-    .tb{flex:1;min-width:58px;background:none;border:none;border-bottom:2px solid transparent;color:var(--sub);font-family:'Plus Jakarta Sans',sans-serif;font-size:.7rem;font-weight:700;padding:9px 3px;cursor:pointer;transition:color .2s,border-color .2s;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
-    .tb.active{color:var(--accent);border-bottom-color:var(--accent)}
-    .bdot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--danger);margin-left:3px;vertical-align:middle;animation:blink 1.4s ease infinite}
-    @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
-
-    .panel{display:none;flex:1;overflow-y:auto;padding:12px;flex-direction:column;gap:10px}
-    .panel.active{display:flex}
-    .panel::-webkit-scrollbar{width:3px}
-    .panel::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
-    .stitle{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--sub);margin-bottom:7px}
-
-    /* Form */
-    .fstack{display:flex;flex-direction:column;gap:7px}
-    .iw{position:relative}
-    .iw .ic{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:.82rem;pointer-events:none}
-    .iw input{width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;font-size:.85rem;padding:10px 10px 10px 31px;outline:none;transition:border-color .2s;-webkit-appearance:none}
-    .iw input:focus{border-color:var(--accent)}
-    .iw input::placeholder{color:var(--muted)}
-    #btn-dispatch{background:linear-gradient(135deg,var(--accent),var(--accent-d));color:#000;border:none;border-radius:10px;font-family:'Plus Jakarta Sans',sans-serif;font-size:.87rem;font-weight:700;padding:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:opacity .2s}
-    #btn-dispatch:disabled{opacity:.45;cursor:not-allowed}
-    #form-msg{font-size:.75rem;text-align:center;min-height:15px;color:var(--sub)}
-
-    /* ═══ REQUEST CARD ═══ */
-    .req-card{background:var(--bg);border:1px solid var(--border);border-radius:13px;padding:13px 13px 11px;animation:up .25s ease;position:relative}
-    @keyframes up{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
-
-    /* Type badge (now / scheduled) */
-    .type-badge{
-      display:inline-flex;align-items:center;gap:4px;
-      font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
-      padding:3px 8px;border-radius:20px;margin-bottom:8px;
+    /* ══════════════════════════════════════════
+       RESET + BASE
+    ══════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; -webkit-tap-highlight-color: transparent; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 16px; /* base — never smaller on mobile */
+      overflow: hidden;
     }
-    .type-now      {background:rgba(16,185,129,.12);color:var(--success)}
-    .type-scheduled{background:rgba(99,102,241,.12);color:#a5b4fc}
 
-    .req-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px}
-    .req-cust{font-weight:700;font-size:.87rem}
-    .req-time-stamp{font-size:.68rem;color:var(--sub)}
+    /* ══════════════════════════════════════════
+       LAYOUT — desktop: sidebar + map side by side
+                mobile:  full screen tabs + bottom nav
+    ══════════════════════════════════════════ */
+    #app { display: flex; height: 100vh; width: 100vw; }
 
-    /* Phone row — clickable */
-    .req-phone{display:flex;align-items:center;gap:6px;margin-bottom:8px}
-    .req-phone a{
-      color:var(--success);font-size:.82rem;font-weight:700;text-decoration:none;
-      display:flex;align-items:center;gap:5px;
-      background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);
-      border-radius:8px;padding:5px 10px;transition:background .2s;
+    /* ── Sidebar (desktop) ─────────────────── */
+    #sidebar {
+      width: 380px;
+      min-width: 380px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
-    .req-phone a:hover{background:rgba(16,185,129,.15)}
 
-    /* Scheduled time row */
-    .req-sched{
-      display:flex;align-items:center;gap:6px;
-      background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.18);
-      border-radius:8px;padding:7px 10px;margin-bottom:8px;
+    /* ── Map panel ─────────────────────────── */
+    #map-wrap { flex: 1; position: relative; }
+    #map { width: 100%; height: 100%; }
+    .leaflet-tile { filter: brightness(.6) saturate(.5); }
+    #map-label {
+      position: absolute; top: 14px; right: 14px; z-index: 500;
+      background: rgba(17,17,24,.9); backdrop-filter: blur(8px);
+      border: 1px solid var(--border); border-radius: 12px;
+      padding: 9px 14px; pointer-events: none;
     }
-    .req-sched .ico{font-size:.9rem;flex-shrink:0}
-    .req-sched .dt{font-size:.8rem;font-weight:600;color:#c7d2fe}
-    .req-sched .sub{font-size:.68rem;color:#818cf8;margin-top:1px}
+    #map-label strong { display: block; font-family: 'Syne', sans-serif; font-size: 15px; color: var(--text); }
+    #map-label span   { font-size: 12px; color: var(--sub); }
 
-    .req-route{display:flex;align-items:center;gap:5px;font-size:.83rem;font-weight:500;margin-bottom:10px;color:var(--text);flex-wrap:wrap}
-    .arr{color:var(--muted);font-size:.7rem}
-    .req-actions{display:flex;gap:7px}
-    .rdsp{flex:1;background:var(--accent);color:#000;border:none;border-radius:9px;font-family:'Plus Jakarta Sans',sans-serif;font-size:.81rem;font-weight:700;padding:10px;cursor:pointer;transition:opacity .2s}
-    .rdsp:hover{opacity:.85}.rdsp:disabled{opacity:.4;cursor:not-allowed}
-    .rrej{background:transparent;border:1px solid var(--border);border-radius:9px;color:var(--sub);font-family:'Plus Jakarta Sans',sans-serif;font-size:.81rem;font-weight:600;padding:10px 13px;cursor:pointer;transition:border-color .2s,color .2s}
-    .rrej:hover{border-color:var(--danger);color:var(--danger)}
+    /* ══════════════════════════════════════════
+       MOBILE OVERRIDES  (≤ 768px)
+    ══════════════════════════════════════════ */
+    @media (max-width: 768px) {
+      #app { flex-direction: column; }
 
-    /* Driver cards */
-    .dc{background:var(--bg);border:1px solid var(--border);border-radius:11px;padding:10px 12px;display:flex;align-items:center;gap:9px;cursor:pointer;transition:border-color .2s}
-    .dc:hover{border-color:var(--sub)}
-    .dav{width:30px;height:30px;background:var(--muted);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0}
-    .di{flex:1;min-width:0}.dn{font-weight:600;font-size:.83rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .dco{font-size:.68rem;color:var(--sub);margin-top:1px}
-    .badge{font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:3px 8px;border-radius:20px;flex-shrink:0}
-    .badge.available{background:rgba(16,185,129,.12);color:var(--success)}
-    .badge.busy{background:rgba(245,158,11,.12);color:var(--warning)}
-    .badge.offline{background:rgba(44,44,64,.5);color:var(--sub)}
+      /* Map shrinks to a strip at top */
+      #map-wrap { height: 180px; flex: none; order: -1; }
 
-    /* Ride cards */
-    .rc{background:var(--bg);border:1px solid var(--border);border-radius:11px;padding:10px 12px;animation:up .25s ease}
-    .rrt{display:flex;align-items:center;gap:5px;font-size:.82rem;font-weight:500;margin-bottom:5px}
-    .rbt{display:flex;align-items:center;justify-content:space-between}
-    .rdv{font-size:.68rem;color:var(--sub)}
-    .rst{font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;display:flex;align-items:center;gap:3px}
-    .sd{width:6px;height:6px;border-radius:50%;flex-shrink:0}
-    .s-pending   .sd{background:var(--sub)}.s-assigned .sd{background:var(--blue);box-shadow:0 0 5px rgba(99,102,241,.7)}
-    .s-ongoing   .sd{background:var(--success);box-shadow:0 0 5px rgba(16,185,129,.7)}.s-rejected .sd{background:var(--danger)}.s-completed .sd{background:var(--sub)}
-    .s-pending .rst{color:var(--sub)}.s-assigned .rst{color:#818cf8}.s-ongoing .rst{color:var(--success)}.s-rejected .rst{color:#fb7185}.s-completed .rst{color:var(--sub)}
+      /* Sidebar fills remaining screen */
+      #sidebar {
+        width: 100%;
+        min-width: 0;
+        flex: 1;
+        border-right: none;
+        border-top: 1px solid var(--border);
+        overflow: hidden;
+      }
 
-    /* History */
-    .hb{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
-    #btn-csv{background:var(--blue);color:#fff;border:none;border-radius:8px;font-family:'Plus Jakarta Sans',sans-serif;font-size:.73rem;font-weight:700;padding:6px 12px;cursor:pointer;transition:opacity .2s}
-    #btn-csv:hover{opacity:.85}
-    .him{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 12px;animation:up .25s ease}
-    .hi-rt{display:flex;align-items:center;gap:5px;font-size:.83rem;font-weight:600;margin-bottom:5px}
-    .hi-mt{display:flex;gap:9px;font-size:.68rem;color:var(--sub)}
+      /* Bigger tap targets on mobile */
+      .tab-btn { font-size: 13px; padding: 14px 4px; }
+      .req-card, .drv-card, .ride-card, .hist-item { padding: 16px; }
+      .dispatch-btn { font-size: 16px; padding: 16px; }
+      .field-input  { font-size: 16px; padding: 14px 14px 14px 44px; }
+    }
 
-    /* Map */
-    #mapinfo{position:absolute;top:10px;right:10px;background:rgba(26,26,36,.9);backdrop-filter:blur(8px);border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:.72rem;color:var(--sub);z-index:500;pointer-events:none}
-    #mapinfo strong{display:block;font-family:'Syne',sans-serif;font-size:.8rem;color:var(--text);margin-bottom:2px}
+    /* ══════════════════════════════════════════
+       HEADER
+    ══════════════════════════════════════════ */
+    #hdr {
+      flex-shrink: 0;
+      padding: 16px 18px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .hdr-left { display: flex; align-items: center; gap: 10px; }
+    .logo-box {
+      width: 38px; height: 38px; border-radius: 11px; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--accent), #d97706);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem;
+    }
+    .logo-text h1 { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; color: #fff; }
+    #admin-email  { font-size: 12px; color: var(--sub); margin-top: 1px; max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #btn-logout   {
+      flex-shrink: 0;
+      background: transparent; border: 1px solid var(--border); border-radius: 9px;
+      color: var(--sub); font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 13px; font-weight: 600; padding: 9px 14px; cursor: pointer;
+      transition: border-color .2s, color .2s;
+    }
+    #btn-logout:hover { border-color: var(--red); color: var(--red); }
 
-    .empty{text-align:center;color:var(--sub);font-size:.78rem;padding:16px 0}
+    /* ══════════════════════════════════════════
+       STATS BAR
+    ══════════════════════════════════════════ */
+    #stats {
+      flex-shrink: 0;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .stat {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 11px; padding: 10px 6px; text-align: center;
+    }
+    .stat .n {
+      font-family: 'Syne', sans-serif;
+      font-size: 22px; font-weight: 800; line-height: 1;
+    }
+    .stat .l { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--sub); margin-top: 3px; }
+    .n-g { color: var(--green); }
+    .n-o { color: var(--orange); }
+    .n-b { color: var(--accent2); }
+    .n-r { color: var(--red); }
 
-    #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--card);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:11px;padding:11px 18px;font-size:.82rem;font-weight:600;color:var(--text);z-index:9999;white-space:nowrap;transition:transform .35s cubic-bezier(.34,1.4,.64,1)}
-    #toast.show{transform:translateX(-50%) translateY(0)}
+    /* ══════════════════════════════════════════
+       TABS
+    ══════════════════════════════════════════ */
+    #tabs {
+      flex-shrink: 0;
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    #tabs::-webkit-scrollbar { display: none; }
+
+    .tab-btn {
+      flex: 1; min-width: 72px;
+      background: none; border: none;
+      border-bottom: 2.5px solid transparent;
+      color: var(--sub);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 12px; font-weight: 700;
+      padding: 12px 4px; cursor: pointer;
+      transition: color .2s, border-color .2s;
+      text-transform: uppercase; letter-spacing: .05em;
+      white-space: nowrap; position: relative;
+    }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* Notification dot on Requests tab */
+    .notif-dot {
+      position: absolute; top: 8px; right: 10px;
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--red);
+      animation: blink 1.4s ease infinite;
+      display: none;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+    /* ══════════════════════════════════════════
+       TAB PANELS
+    ══════════════════════════════════════════ */
+    .panel {
+      display: none;
+      flex: 1; overflow-y: auto;
+      padding: 16px;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .panel.active { display: flex; }
+    .panel::-webkit-scrollbar { width: 4px; }
+    .panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* Section label */
+    .sec { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--sub); margin-bottom: 10px; }
+
+    /* Empty state */
+    .empty {
+      text-align: center; color: var(--sub);
+      font-size: 14px; padding: 24px 0;
+    }
+
+    /* ══════════════════════════════════════════
+       SHARED CARD STYLE
+    ══════════════════════════════════════════ */
+    .card-base {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      animation: fadeUp .25s ease;
+    }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+
+    /* ══════════════════════════════════════════
+       REQUEST CARDS
+    ══════════════════════════════════════════ */
+    .req-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; animation: fadeUp .25s ease; }
+
+    /* Type pill */
+    .type-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+      padding: 4px 10px; border-radius: 20px; margin-bottom: 10px;
+    }
+    .type-now       { background: rgba(16,185,129,.12); color: var(--green); }
+    .type-scheduled { background: rgba(99,102,241,.14); color: #a5b4fc; }
+
+    /* Customer row */
+    .req-cust-row {
+      display: flex; align-items: flex-start;
+      justify-content: space-between; margin-bottom: 10px; gap: 8px;
+    }
+    .req-name { font-size: 16px; font-weight: 700; }
+    .req-ts   { font-size: 12px; color: var(--sub); white-space: nowrap; }
+
+    /* Phone link */
+    .phone-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      color: var(--green); font-size: 15px; font-weight: 700;
+      text-decoration: none;
+      background: rgba(16,185,129,.1); border: 1px solid rgba(16,185,129,.25);
+      border-radius: 9px; padding: 8px 14px;
+      margin-bottom: 10px;
+      transition: background .2s;
+    }
+    .phone-link:active { background: rgba(16,185,129,.2); }
+
+    /* Scheduled time box */
+    .sched-box {
+      background: rgba(99,102,241,.1); border: 1px solid rgba(99,102,241,.2);
+      border-radius: 9px; padding: 10px 12px; margin-bottom: 10px;
+      display: flex; align-items: flex-start; gap: 8px;
+    }
+    .sched-box .ico { font-size: 1.1rem; margin-top: 1px; }
+    .sched-dt  { font-size: 14px; font-weight: 700; color: #c7d2fe; }
+    .sched-rel { font-size: 12px; color: #818cf8; margin-top: 2px; }
+
+    /* Route row */
+    .req-route {
+      font-size: 14px; font-weight: 500; color: var(--text);
+      display: flex; align-items: center; gap: 6px;
+      flex-wrap: wrap; margin-bottom: 12px; line-height: 1.5;
+    }
+    .arr { color: var(--sub); font-size: 13px; }
+
+    /* Action buttons */
+    .req-actions { display: flex; gap: 8px; }
+    .btn-dispatch {
+      flex: 1; border: none; border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent), #d97706);
+      color: #000; font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 15px; font-weight: 700; padding: 13px;
+      cursor: pointer; transition: opacity .2s;
+    }
+    .btn-dispatch:hover { opacity: .88; }
+    .btn-dispatch:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-reject {
+      background: transparent; border: 1px solid var(--border);
+      border-radius: 10px; color: var(--sub);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 15px; font-weight: 600; padding: 13px 17px;
+      cursor: pointer; transition: border-color .2s, color .2s;
+    }
+    .btn-reject:hover { border-color: var(--red); color: var(--red); }
+
+    /* ══════════════════════════════════════════
+       DISPATCH FORM
+    ══════════════════════════════════════════ */
+    .field-wrap { position: relative; margin-bottom: 10px; }
+    .field-ico {
+      position: absolute; left: 14px; top: 50%;
+      transform: translateY(-50%); font-size: 1rem; pointer-events: none;
+    }
+    .field-input {
+      width: 100%; background: var(--bg);
+      border: 1.5px solid var(--border); border-radius: 12px;
+      color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 15px; padding: 14px 14px 14px 44px;
+      outline: none; transition: border-color .2s, box-shadow .2s;
+      -webkit-appearance: none;
+    }
+    .field-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(245,158,11,.15); }
+    .field-input::placeholder { color: var(--muted); }
+
+    .dispatch-btn {
+      width: 100%; border: none; border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent), #d97706);
+      color: #000; font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 15px; font-weight: 700; padding: 15px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: opacity .2s;
+    }
+    .dispatch-btn:disabled { opacity: .45; cursor: not-allowed; }
+    #form-msg { font-size: 13px; text-align: center; min-height: 18px; color: var(--sub); margin-top: 6px; }
+
+    /* ══════════════════════════════════════════
+       DRIVER CARDS
+    ══════════════════════════════════════════ */
+    .drv-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 15px;
+      display: flex; align-items: center; gap: 12px;
+      cursor: pointer; transition: border-color .2s;
+    }
+    .drv-card:active { border-color: var(--sub); }
+    .drv-avatar {
+      width: 38px; height: 38px; border-radius: 50%;
+      background: var(--muted); display: flex;
+      align-items: center; justify-content: center;
+      font-size: 1.1rem; flex-shrink: 0;
+    }
+    .drv-info { flex: 1; min-width: 0; }
+    .drv-name  { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .drv-coord { font-size: 12px; color: var(--sub); margin-top: 2px; }
+    .badge { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 5px 10px; border-radius: 20px; flex-shrink: 0; }
+    .badge.available { background: rgba(16,185,129,.14); color: var(--green); }
+    .badge.busy      { background: rgba(245,158,11,.14); color: var(--orange); }
+    .badge.offline   { background: rgba(50,50,70,.5);    color: var(--sub); }
+
+    /* ══════════════════════════════════════════
+       RIDE CARDS (live rides)
+    ══════════════════════════════════════════ */
+    .ride-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 15px;
+      animation: fadeUp .25s ease;
+    }
+    .ride-route { font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+    .ride-meta  { display: flex; align-items: center; justify-content: space-between; }
+    .ride-drv   { font-size: 12px; color: var(--sub); }
+    .ride-status { font-size: 12px; font-weight: 700; text-transform: uppercase; display: flex; align-items: center; gap: 5px; }
+    .sdot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .s-pending   .sdot { background: var(--sub); }
+    .s-assigned  .sdot { background: var(--accent2); box-shadow: 0 0 6px rgba(99,102,241,.7); }
+    .s-ongoing   .sdot { background: var(--green); box-shadow: 0 0 6px rgba(16,185,129,.7); }
+    .s-rejected  .sdot { background: var(--red); }
+    .s-completed .sdot { background: var(--sub); }
+    .s-pending   .ride-status { color: var(--sub); }
+    .s-assigned  .ride-status { color: #818cf8; }
+    .s-ongoing   .ride-status { color: var(--green); }
+    .s-rejected  .ride-status { color: var(--red); }
+    .s-completed .ride-status { color: var(--sub); }
+
+    /* ══════════════════════════════════════════
+       HISTORY
+    ══════════════════════════════════════════ */
+    .hist-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .hist-count   { font-size: 13px; color: var(--sub); margin-top: 3px; }
+    #btn-csv {
+      background: var(--accent2); color: #fff; border: none;
+      border-radius: 9px; font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 13px; font-weight: 700; padding: 9px 15px; cursor: pointer;
+      transition: opacity .2s;
+    }
+    #btn-csv:hover { opacity: .85; }
+    .hist-item {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 15px;
+      animation: fadeUp .25s ease;
+    }
+    .hist-route { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 7px; }
+    .hist-meta  { display: flex; gap: 12px; font-size: 12px; color: var(--sub); flex-wrap: wrap; }
+
+    /* ══════════════════════════════════════════
+       TOAST
+    ══════════════════════════════════════════ */
+    #toast {
+      position: fixed; bottom: 24px; left: 50%;
+      transform: translateX(-50%) translateY(90px);
+      background: var(--card); border: 1px solid var(--border);
+      border-left: 3px solid var(--accent); border-radius: 12px;
+      padding: 13px 22px; font-size: 14px; font-weight: 600;
+      color: var(--text); z-index: 9999; white-space: nowrap;
+      transition: transform .35s cubic-bezier(.34,1.4,.64,1);
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
   </style>
 </head>
 <body>
-<div id="shell">
+<div id="app">
 
+  <!-- ══════════ SIDEBAR ══════════ -->
   <div id="sidebar">
+
+    <!-- Header -->
     <div id="hdr">
-      <div class="hdr-r">
-        <div class="logo-r"><div class="lm">🚦</div><div><h1>Dispatch</h1><div id="ae">Loading…</div></div></div>
-        <button id="bl">Sign Out</button>
+      <div class="hdr-left">
+        <div class="logo-box">🚦</div>
+        <div class="logo-text">
+          <h1>Dispatch</h1>
+          <div id="admin-email">Loading…</div>
+        </div>
       </div>
+      <button id="btn-logout">Sign Out</button>
     </div>
 
+    <!-- Stats -->
     <div id="stats">
-      <div class="sp"><div class="n ng" id="sa">0</div><div class="l">Avail</div></div>
-      <div class="sp"><div class="n no" id="sb2">0</div><div class="l">Busy</div></div>
-      <div class="sp"><div class="n nb" id="sr">0</div><div class="l">Rides</div></div>
-      <div class="sp"><div class="n nr" id="sq">0</div><div class="l">Reqs</div></div>
+      <div class="stat"><div class="n n-g" id="s-avail">0</div><div class="l">Avail</div></div>
+      <div class="stat"><div class="n n-o" id="s-busy">0</div><div class="l">Busy</div></div>
+      <div class="stat"><div class="n n-b" id="s-rides">0</div><div class="l">Rides</div></div>
+      <div class="stat"><div class="n n-r" id="s-reqs">0</div><div class="l">Reqs</div></div>
     </div>
 
+    <!-- Tabs -->
     <div id="tabs">
-      <button class="tb active" data-tab="requests">📥 Requests<span class="bdot" id="rdot" style="display:none"></span></button>
-      <button class="tb"        data-tab="dispatch">🚖 Dispatch</button>
-      <button class="tb"        data-tab="drivers" >👥 Drivers</button>
-      <button class="tb"        data-tab="history" >📋 History</button>
+      <button class="tab-btn active" data-tab="requests">
+        📥 Requests
+        <span class="notif-dot" id="notif-dot"></span>
+      </button>
+      <button class="tab-btn" data-tab="dispatch">🚖 Dispatch</button>
+      <button class="tab-btn" data-tab="drivers">👥 Drivers</button>
+      <button class="tab-btn" data-tab="history">📋 History</button>
     </div>
 
-    <!-- REQUESTS -->
+    <!-- ── REQUESTS PANEL ── -->
     <div class="panel active" id="tab-requests">
-      <div class="stitle">Customer Requests</div>
+      <div class="sec">Customer Ride Requests</div>
       <div id="req-list"><div class="empty">No pending requests.</div></div>
     </div>
 
-    <!-- DISPATCH -->
+    <!-- ── DISPATCH PANEL ── -->
     <div class="panel" id="tab-dispatch">
       <div>
-        <div class="stitle">Manual Ride</div>
-        <div class="fstack">
-          <div class="iw"><span class="ic">📍</span><input type="text" id="ip" placeholder="Pickup location"/></div>
-          <div class="iw"><span class="ic">🏁</span><input type="text" id="id2" placeholder="Drop location"/></div>
-          <button id="btn-dispatch"><span>＋</span> Dispatch</button>
-          <div id="form-msg"></div>
+        <div class="sec">Manual Ride Dispatch</div>
+        <div class="field-wrap">
+          <span class="field-ico">📍</span>
+          <input class="field-input" type="text" id="inp-pickup" placeholder="Pickup location"/>
         </div>
+        <div class="field-wrap">
+          <span class="field-ico">🏁</span>
+          <input class="field-input" type="text" id="inp-drop" placeholder="Drop location"/>
+        </div>
+        <button class="dispatch-btn" id="btn-create-ride">
+          <span>＋</span> Dispatch Ride
+        </button>
+        <div id="form-msg"></div>
       </div>
       <div>
-        <div class="stitle">Live Rides</div>
+        <div class="sec">Live Rides</div>
         <div id="rides-list"><div class="empty">No rides yet.</div></div>
       </div>
     </div>
 
-    <!-- DRIVERS -->
+    <!-- ── DRIVERS PANEL ── -->
     <div class="panel" id="tab-drivers">
-      <div class="stitle">All Drivers</div>
-      <div id="drv-list"><div class="empty">No drivers online.</div></div>
+      <div class="sec">All Drivers</div>
+      <div id="driver-list"><div class="empty">No drivers online.</div></div>
     </div>
 
-    <!-- HISTORY -->
+    <!-- ── HISTORY PANEL ── -->
     <div class="panel" id="tab-history">
-      <div class="hb">
-        <div><div class="stitle" style="margin:0">Completed Rides</div><div id="htot" style="font-size:.7rem;color:var(--sub);margin-top:2px">0 rides</div></div>
-        <button id="btn-csv">⬇ CSV</button>
+      <div class="hist-toolbar">
+        <div>
+          <div class="sec" style="margin:0">Completed Rides</div>
+          <div class="hist-count" id="hist-count">0 rides</div>
+        </div>
+        <button id="btn-csv">⬇ Export CSV</button>
       </div>
       <div id="hist-list"><div class="empty">No completed rides yet.</div></div>
     </div>
+
+  </div><!-- /sidebar -->
+
+  <!-- ══════════ MAP ══════════ -->
+  <div id="map-wrap">
+    <div id="map"></div>
+    <div id="map-label">
+      <strong>Live Fleet</strong>
+      <span>Real-time driver positions</span>
+    </div>
   </div>
 
-  <div id="map-area">
-    <div id="map"></div>
-    <div id="mapinfo"><strong>Live Fleet</strong>Real-time positions</div>
-    <button id="map-toggle" onclick="document.body.classList.toggle('map-open')">🗺 Map</button>
-  </div>
-</div>
+</div><!-- /app -->
 <div id="toast"></div>
 
+<!-- ══════════════════════════════════════════════
+     FIREBASE + APP LOGIC
+══════════════════════════════════════════════ -->
 <script type="module">
-  import { requireAuth, logoutUser, db } from "./auth.js";
-  import {
-    collection, doc, addDoc, setDoc, updateDoc, getDocs,
-    onSnapshot, query, where, orderBy, serverTimestamp,
-  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { requireAuth, logoutUser, db } from "./auth.js";
+import {
+  collection, doc,
+  addDoc, setDoc, updateDoc, getDocs,
+  onSnapshot, query, where, orderBy, serverTimestamp,
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-  // ── Auth ──────────────────────────────────────────────
-  const { user, email } = await requireAuth("admin");
-  document.getElementById("ae").textContent = email || user.email;
-  document.getElementById("bl").addEventListener("click", async () => { await logoutUser(); window.location.href="login.html"; });
+// ── AUTH ──────────────────────────────────────────────
+const { user, email } = await requireAuth("admin");
+document.getElementById("admin-email").textContent = email || user.email;
 
-  // ── Tabs ──────────────────────────────────────────────
-  document.querySelectorAll(".tb").forEach(btn => {
-    btn.addEventListener("click", () => {
-      document.querySelectorAll(".tb").forEach(b=>b.classList.remove("active"));
-      document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
-      btn.classList.add("active");
-      document.getElementById("tab-"+btn.dataset.tab).classList.add("active");
-    });
+document.getElementById("btn-logout").addEventListener("click", async () => {
+  await logoutUser();
+  window.location.href = "login.html";
+});
+
+// ── TABS ──────────────────────────────────────────────
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
   });
+});
 
-  // ── Map ───────────────────────────────────────────────
-  const map = L.map("map").setView([30.9,75.85],12);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(map);
-  const mkrs = {};
+// ── MAP ───────────────────────────────────────────────
+const map = L.map("map").setView([30.9, 75.85], 12);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  attribution: "© OpenStreetMap contributors"
+}).addTo(map);
+const driverMarkers = {};
 
-  function toast(msg,color="var(--accent)"){
-    const el=document.getElementById("toast");
-    el.textContent=msg;el.style.borderLeftColor=color;
-    el.classList.add("show");setTimeout(()=>el.classList.remove("show"),3000);
+// ── TOAST ─────────────────────────────────────────────
+function toast(msg, color = "var(--accent)") {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.style.borderLeftColor = color;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), 3200);
+}
+
+// ── STATS ─────────────────────────────────────────────
+let sA = 0, sB = 0, sR = 0, sQ = 0;
+function updateStats() {
+  document.getElementById("s-avail").textContent = sA;
+  document.getElementById("s-busy").textContent  = sB;
+  document.getElementById("s-rides").textContent = sR;
+  document.getElementById("s-reqs").textContent  = sQ;
+}
+
+// ── DRIVERS LISTENER ─────────────────────────────────
+onSnapshot(collection(db, "drivers"), snap => {
+  const list = document.getElementById("driver-list");
+  list.innerHTML = "";
+  sA = 0; sB = 0;
+
+  if (snap.empty) {
+    list.innerHTML = '<div class="empty">No drivers online.</div>';
+    updateStats(); return;
   }
 
-  // ── Stats ─────────────────────────────────────────────
-  let sA=0,sB=0,sR=0,sQ=0;
-  const upStats=()=>{ ["sa","sb2","sr","sq"].forEach((id,i)=>document.getElementById(id).textContent=[sA,sB,sR,sQ][i]); };
+  snap.forEach(d => {
+    const id     = d.id;
+    const data   = d.data();
+    const status = data.status || "offline";
+    const loc    = data.location;
+    const name   = data.email || id;
 
-  // ── Drivers ───────────────────────────────────────────
-  onSnapshot(collection(db,"drivers"),snap=>{
-    const list=document.getElementById("drv-list");
-    list.innerHTML=""; sA=0;sB=0;
-    if(snap.empty){list.innerHTML='<div class="empty">No drivers online.</div>';upStats();return;}
-    snap.forEach(d=>{
-      const id=d.id,data=d.data(),st=data.status||"offline",loc=data.location,nm=data.email||id;
-      if(st==="available")sA++;if(st==="busy")sB++;
-      if(loc){
-        const {lat,lng}=loc,col=st==="available"?"#10b981":st==="busy"?"#f59e0b":"#3a3a50";
-        if(mkrs[id]){mkrs[id].setLatLng([lat,lng]);mkrs[id].getPopup().setContent(`<b>${nm}</b><br>${st}`);}
-        else mkrs[id]=L.marker([lat,lng],{icon:L.divIcon({className:"",html:`<div style="background:${col};width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 8px rgba(0,0,0,.5)"></div>`,iconSize:[12,12],iconAnchor:[6,6]})}).addTo(map).bindPopup(`<b>${nm}</b><br>${st}`);
-        const dot=mkrs[id].getElement()?.querySelector("div");if(dot)dot.style.background=col;
+    if (status === "available") sA++;
+    if (status === "busy")      sB++;
+
+    // Update map marker
+    if (loc) {
+      const { lat, lng } = loc;
+      const col = status === "available" ? "#10b981" : status === "busy" ? "#f59e0b" : "#3a3a50";
+      const html = `<div style="background:${col};width:13px;height:13px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 0 8px rgba(0,0,0,.5)"></div>`;
+
+      if (driverMarkers[id]) {
+        driverMarkers[id].setLatLng([lat, lng]);
+        driverMarkers[id].getPopup().setContent(`<b>${name}</b><br>${status}`);
+        const dot = driverMarkers[id].getElement()?.querySelector("div");
+        if (dot) dot.style.background = col;
+      } else {
+        driverMarkers[id] = L.marker([lat, lng], {
+          icon: L.divIcon({ className: "", html, iconSize: [13, 13], iconAnchor: [6.5, 6.5] })
+        }).addTo(map).bindPopup(`<b>${name}</b><br>${status}`);
       }
-      const c=document.createElement("div");c.className="dc";
-      c.innerHTML=`<div class="dav">🧑</div><div class="di"><div class="dn">${nm}</div><div class="dco">${loc?`${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}`:"No GPS"}</div></div><span class="badge ${st}">${st}</span>`;
-      c.addEventListener("click",()=>{if(loc)map.flyTo([loc.lat,loc.lng],16);});
-      list.appendChild(c);
-    });
-    upStats();
+    }
+
+    // Sidebar card
+    const card = document.createElement("div");
+    card.className = "drv-card";
+    card.innerHTML = `
+      <div class="drv-avatar">🧑</div>
+      <div class="drv-info">
+        <div class="drv-name">${name}</div>
+        <div class="drv-coord">${loc ? `${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}` : "No GPS yet"}</div>
+      </div>
+      <span class="badge ${status}">${status}</span>`;
+    card.addEventListener("click", () => { if (loc) map.flyTo([loc.lat, loc.lng], 16); });
+    list.appendChild(card);
   });
 
-  // ── Live rides ─────────────────────────────────────────
-  onSnapshot(query(collection(db,"rides"),orderBy("createdAt","desc")),snap=>{
-    sR=snap.size;upStats();
-    const list=document.getElementById("rides-list");list.innerHTML="";
-    if(snap.empty){list.innerHTML='<div class="empty">No rides yet.</div>';return;}
-    snap.forEach(d=>{
-      const r=d.data(),st=r.status||"pending",drv=r.driverEmail||r.driverId||"Unassigned";
-      const c=document.createElement("div");c.className=`rc s-${st}`;
-      c.innerHTML=`<div class="rrt"><span>📍 ${r.pickup||"—"}</span><span class="arr">→</span><span>🏁 ${r.drop||"—"}</span></div><div class="rbt"><span class="rdv">${r.driverId?`Driver: ${drv}`:"Unassigned"}</span><span class="rst"><span class="sd"></span>${st}</span></div>`;
-      list.appendChild(c);
-    });
-  });
+  updateStats();
+});
 
-  // ── History ────────────────────────────────────────────
-  let histData=[];
-  onSnapshot(query(collection(db,"rides"),where("status","==","completed"),orderBy("completedAt","desc")),snap=>{
-    histData=[];
-    const list=document.getElementById("hist-list");
-    document.getElementById("htot").textContent=`${snap.size} ride${snap.size!==1?"s":""}`;
-    list.innerHTML="";
-    if(snap.empty){list.innerHTML='<div class="empty">No completed rides yet.</div>';return;}
-    snap.forEach(d=>{
-      const r=d.data(),date=r.completedAt?.toDate?r.completedAt.toDate().toLocaleString():"—",drv=r.driverEmail||r.driverId||"Unknown";
-      histData.push({pickup:r.pickup||"",drop:r.drop||"",driver:drv,completed:date});
-      const item=document.createElement("div");item.className="him";
-      item.innerHTML=`<div class="hi-rt"><span>📍 ${r.pickup||"—"}</span><span style="color:var(--muted)">→</span><span>🏁 ${r.drop||"—"}</span></div><div class="hi-mt"><span>🧑 ${drv}</span><span>🕐 ${date}</span></div>`;
+// ── LIVE RIDES LISTENER ───────────────────────────────
+onSnapshot(
+  query(collection(db, "rides"), orderBy("createdAt", "desc")),
+  snap => {
+    sR = snap.size;
+    updateStats();
+    const list = document.getElementById("rides-list");
+    list.innerHTML = "";
+    if (snap.empty) { list.innerHTML = '<div class="empty">No rides yet.</div>'; return; }
+
+    snap.forEach(d => {
+      const r  = d.data();
+      const st = r.status || "pending";
+      const drv = r.driverEmail || r.driverId || "Unassigned";
+      const card = document.createElement("div");
+      card.className = `ride-card s-${st}`;
+      card.innerHTML = `
+        <div class="ride-route">
+          <span>📍 ${r.pickup || "—"}</span>
+          <span class="arr">→</span>
+          <span>🏁 ${r.drop || "—"}</span>
+        </div>
+        <div class="ride-meta">
+          <span class="ride-drv">${r.driverId ? `Driver: ${drv}` : "Unassigned"}</span>
+          <span class="ride-status"><span class="sdot"></span>${st}</span>
+        </div>`;
+      list.appendChild(card);
+    });
+  }
+);
+
+// ── HISTORY LISTENER ──────────────────────────────────
+let histData = [];
+onSnapshot(
+  query(collection(db, "rides"), where("status", "==", "completed"), orderBy("completedAt", "desc")),
+  snap => {
+    histData = [];
+    const list = document.getElementById("hist-list");
+    document.getElementById("hist-count").textContent = `${snap.size} ride${snap.size !== 1 ? "s" : ""}`;
+    list.innerHTML = "";
+    if (snap.empty) { list.innerHTML = '<div class="empty">No completed rides yet.</div>'; return; }
+
+    snap.forEach(d => {
+      const r    = d.data();
+      const date = r.completedAt?.toDate ? r.completedAt.toDate().toLocaleString() : "—";
+      const drv  = r.driverEmail || r.driverId || "Unknown";
+      histData.push({ pickup: r.pickup || "", drop: r.drop || "", driver: drv, completed: date });
+
+      const item = document.createElement("div");
+      item.className = "hist-item";
+      item.innerHTML = `
+        <div class="hist-route">
+          <span>📍 ${r.pickup || "—"}</span>
+          <span style="color:var(--sub)">→</span>
+          <span>🏁 ${r.drop || "—"}</span>
+        </div>
+        <div class="hist-meta">
+          <span>🧑 ${drv}</span>
+          <span>🕐 ${date}</span>
+        </div>`;
       list.appendChild(item);
     });
-  });
+  }
+);
 
-  document.getElementById("btn-csv").addEventListener("click",()=>{
-    if(!histData.length){toast("No data to export","var(--warning)");return;}
-    const csv=["Pickup,Drop,Driver,Completed",...histData.map(r=>[r.pickup,r.drop,r.driver,r.completed].map(v=>`"${v}"`).join(","))].join("\n");
-    Object.assign(document.createElement("a"),{href:URL.createObjectURL(new Blob([csv],{type:"text/csv"})),download:`rides_${new Date().toISOString().slice(0,10)}.csv`}).click();
-    toast("CSV exported ✓","var(--success)");
-  });
+// CSV export
+document.getElementById("btn-csv").addEventListener("click", () => {
+  if (!histData.length) { toast("No data to export", "var(--orange)"); return; }
+  const rows = histData.map(r => [r.pickup, r.drop, r.driver, r.completed].map(v => `"${v}"`).join(","));
+  const csv  = ["Pickup,Drop,Driver,Completed At", ...rows].join("\n");
+  Object.assign(document.createElement("a"), {
+    href:     URL.createObjectURL(new Blob([csv], { type: "text/csv" })),
+    download: `rides_${new Date().toISOString().slice(0, 10)}.csv`,
+  }).click();
+  toast("CSV exported ✓", "var(--green)");
+});
 
-  // ══════════════════════════════════════════════════════
-  // CUSTOMER REQUESTS — core feature
-  // Shows phone as call link, scheduled time prominently
-  // ══════════════════════════════════════════════════════
-  onSnapshot(
-    query(collection(db,"ride_requests"),where("status","==","pending"),orderBy("createdAt","asc")),
-    snap=>{
-      sQ=snap.size;upStats();
-      const list=document.getElementById("req-list");
-      document.getElementById("rdot").style.display=snap.size>0?"inline-block":"none";
-      list.innerHTML="";
-      if(snap.empty){list.innerHTML='<div class="empty">No pending requests.</div>';return;}
+// ══════════════════════════════════════════════════════
+// CUSTOMER REQUESTS LISTENER
+// Reads from ride_requests collection (pending only)
+// Shows phone as call link, scheduled time, dispatch button
+// ══════════════════════════════════════════════════════
+console.log("[Admin] Starting ride_requests listener…");
 
-      // Sort: scheduled rides first (by their scheduledAt), then immediate
-      const docs=[...snap.docs].sort((a,b)=>{
-        const ra=a.data(),rb=b.data();
-        // Both scheduled → sort by scheduledAt asc
-        if(ra.isScheduled&&rb.isScheduled){
-          return new Date(ra.scheduledAt||0)-new Date(rb.scheduledAt||0);
-        }
-        // Scheduled first
-        if(ra.isScheduled) return -1;
-        if(rb.isScheduled) return  1;
-        return 0;
-      });
+onSnapshot(
+  query(
+    collection(db, "ride_requests"),
+    where("status", "==", "pending"),
+    orderBy("createdAt", "asc")
+  ),
+  snap => {
+    console.log("[Admin] ride_requests snap — size:", snap.size);
 
-      docs.forEach(d=>{
-        const r=d.data(),rId=d.id;
-        const time=r.createdAt?.toDate?r.createdAt.toDate().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):"—";
-        const isScheduled=r.isScheduled&&r.scheduledAt;
-        let schedHtml="";
-        if(isScheduled){
-          const dt=new Date(r.scheduledAt);
-          const rel=formatRelTime(dt);
-          schedHtml=`<div class="req-sched"><span class="ico">📅</span><div><div class="dt">${dt.toLocaleString([],{dateStyle:"medium",timeStyle:"short"})}</div><div class="sub">${rel}</div></div></div>`;
-        }
-        const phoneHtml=r.customerPhone
-          ?`<div class="req-phone"><a href="tel:${r.customerPhone}">📞 ${r.customerPhone}</a></div>`
-          :"";
+    sQ = snap.size;
+    updateStats();
 
-        const card=document.createElement("div");card.className="req-card";
-        card.innerHTML=`
-          <div class="type-badge ${isScheduled?"type-scheduled":"type-now"}">${isScheduled?"📅 Scheduled":"⚡ Now"}</div>
-          <div class="req-top">
-            <span class="req-cust">👤 ${r.customerName||r.customerEmail||"Customer"}</span>
-            <span class="req-time-stamp">${time}</span>
-          </div>
-          ${phoneHtml}
-          ${schedHtml}
-          <div class="req-route">
-            <span>📍 ${r.pickup||"—"}</span><span class="arr">→</span><span>🏁 ${r.drop||"—"}</span>
-          </div>
-          <div class="req-actions">
-            <button class="rdsp">🚖 Dispatch</button>
-            <button class="rrej">✕</button>
-          </div>`;
+    const dot = document.getElementById("notif-dot");
+    dot.style.display = snap.size > 0 ? "block" : "none";
 
-        // Dispatch
-        card.querySelector(".rdsp").addEventListener("click",async()=>{
-          const btn=card.querySelector(".rdsp");
-          btn.disabled=true;btn.textContent="Assigning…";
-          try{
-            const dSnap=await getDocs(query(collection(db,"drivers"),where("status","==","available")));
-            if(dSnap.empty){
-              await updateDoc(doc(db,"ride_requests",rId),{status:"dispatched"});
-              toast("No drivers available — request queued","var(--warning)");return;
-            }
-            const dDoc=dSnap.docs[0],dId=dDoc.id,dData=dDoc.data();
-            const rideRef=await addDoc(collection(db,"rides"),{
-              pickup:r.pickup,drop:r.drop,
-              status:"assigned",driverId:dId,
-              driverEmail:dData.email||dId,
-              requestId:rId,customerId:r.customerId,
-              customerName:r.customerName||"",
-              customerPhone:r.customerPhone||"",
-              isScheduled:r.isScheduled||false,
-              scheduledAt:r.scheduledAt||null,
-              createdAt:serverTimestamp(),
-            });
-            await setDoc(doc(db,"drivers",dId),{status:"busy"},{merge:true});
-            await updateDoc(doc(db,"ride_requests",rId),{status:"assigned",driverId:dId,driverEmail:dData.email||dId,rideId:rideRef.id});
-            toast(`Dispatched → ${dData.email||dId}`,"var(--success)");
-          }catch(e){console.error("[Dispatch req]",e);btn.disabled=false;btn.textContent="🚖 Dispatch";}
-        });
+    const list = document.getElementById("req-list");
+    list.innerHTML = "";
 
-        // Reject
-        card.querySelector(".rrej").addEventListener("click",async()=>{
-          await updateDoc(doc(db,"ride_requests",rId),{status:"rejected"});
-          toast("Request rejected","var(--sub)");
-        });
-
-        list.appendChild(card);
-      });
+    if (snap.empty) {
+      list.innerHTML = '<div class="empty">No pending requests.</div>';
+      return;
     }
-  );
 
-  // Helper: relative time string
-  function formatRelTime(dt) {
-    const diff=dt-Date.now();
-    if(diff<0) return "Overdue";
-    const mins=Math.round(diff/60000);
-    if(mins<60) return `in ${mins} min`;
-    const hrs=Math.floor(mins/60),rem=mins%60;
-    return rem>0?`in ${hrs}h ${rem}m`:`in ${hrs}h`;
+    // Sort: scheduled rides first (by scheduledAt), then immediate (by createdAt)
+    const docs = [...snap.docs].sort((a, b) => {
+      const ra = a.data(), rb = b.data();
+      if (ra.isScheduled && rb.isScheduled) {
+        return new Date(ra.scheduledAt || 0) - new Date(rb.scheduledAt || 0);
+      }
+      if (ra.isScheduled) return -1;
+      if (rb.isScheduled) return 1;
+      return 0;
+    });
+
+    docs.forEach(d => {
+      const r   = d.data();
+      const rId = d.id;
+
+      console.log("[Admin] Request:", rId, r);
+
+      // Time stamp
+      const timeStr = r.createdAt?.toDate
+        ? r.createdAt.toDate().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        : "—";
+
+      // Type pill
+      const isScheduled = !!(r.isScheduled && r.scheduledAt);
+      const typePill = isScheduled
+        ? `<div class="type-pill type-scheduled">📅 Scheduled</div>`
+        : `<div class="type-pill type-now">⚡ Ride Now</div>`;
+
+      // Phone
+      const phoneLine = r.customerPhone
+        ? `<a class="phone-link" href="tel:${r.customerPhone}">📞 ${r.customerPhone}</a>`
+        : "";
+
+      // Scheduled time
+      let schedLine = "";
+      if (isScheduled) {
+        const dt  = new Date(r.scheduledAt);
+        const rel = relTime(dt);
+        schedLine = `
+          <div class="sched-box">
+            <div class="ico">📅</div>
+            <div>
+              <div class="sched-dt">${dt.toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}</div>
+              <div class="sched-rel">${rel}</div>
+            </div>
+          </div>`;
+      }
+
+      const card = document.createElement("div");
+      card.className = "req-card";
+      card.innerHTML = `
+        ${typePill}
+        <div class="req-cust-row">
+          <span class="req-name">👤 ${r.customerName || r.customerEmail || "Customer"}</span>
+          <span class="req-ts">${timeStr}</span>
+        </div>
+        ${phoneLine}
+        ${schedLine}
+        <div class="req-route">
+          <span>📍 ${r.pickup || "—"}</span>
+          <span class="arr">→</span>
+          <span>🏁 ${r.drop || "—"}</span>
+        </div>
+        <div class="req-actions">
+          <button class="btn-dispatch">🚖 Dispatch</button>
+          <button class="btn-reject">✕ Reject</button>
+        </div>`;
+
+      // ── Dispatch ─────────────────────────────
+      card.querySelector(".btn-dispatch").addEventListener("click", async () => {
+        const btn = card.querySelector(".btn-dispatch");
+        btn.disabled = true;
+        btn.textContent = "Assigning…";
+
+        try {
+          const dSnap = await getDocs(
+            query(collection(db, "drivers"), where("status", "==", "available"))
+          );
+
+          if (dSnap.empty) {
+            // No driver available — mark dispatched so admin knows it's acknowledged
+            await updateDoc(doc(db, "ride_requests", rId), { status: "dispatched" });
+            toast("⚠️ No drivers available — request queued", "var(--orange)");
+            return;
+          }
+
+          const dDoc    = dSnap.docs[0];
+          const driverId = dDoc.id;
+          const dData    = dDoc.data();
+
+          // Create ride doc — driver gets popup notification
+          const rideRef = await addDoc(collection(db, "rides"), {
+            pickup:        r.pickup,
+            drop:          r.drop,
+            status:        "assigned",
+            driverId,
+            driverEmail:   dData.email || driverId,
+            requestId:     rId,
+            customerId:    r.customerId,
+            customerName:  r.customerName  || "",
+            customerPhone: r.customerPhone || "",
+            isScheduled:   r.isScheduled   || false,
+            scheduledAt:   r.scheduledAt   || null,
+            createdAt:     serverTimestamp(),
+          });
+
+          // Mark driver busy
+          await setDoc(doc(db, "drivers", driverId), { status: "busy" }, { merge: true });
+
+          // Update request so customer sees live status
+          await updateDoc(doc(db, "ride_requests", rId), {
+            status:      "assigned",
+            driverId,
+            driverEmail: dData.email || driverId,
+            rideId:      rideRef.id,
+          });
+
+          const label = dData.email || driverId;
+          toast(`✅ Dispatched → ${label}`, "var(--green)");
+
+        } catch (err) {
+          console.error("[Dispatch]", err);
+          btn.disabled    = false;
+          btn.textContent = "🚖 Dispatch";
+          toast("❌ Error dispatching. Check console.", "var(--red)");
+        }
+      });
+
+      // ── Reject ───────────────────────────────
+      card.querySelector(".btn-reject").addEventListener("click", async () => {
+        await updateDoc(doc(db, "ride_requests", rId), { status: "rejected" });
+        toast("Request rejected", "var(--sub)");
+      });
+
+      list.appendChild(card);
+    });
+  },
+  err => {
+    console.error("[ride_requests listener error]", err.code, err.message);
+    // Common cause: missing Firestore composite index
+    // Firebase will print a link in console to create it
+    document.getElementById("req-list").innerHTML =
+      `<div class="empty">⚠️ Index error — check browser console for a link to create the required Firestore index.</div>`;
+  }
+);
+
+// ── MANUAL DISPATCH ───────────────────────────────────
+document.getElementById("btn-create-ride").addEventListener("click", async () => {
+  const pickup = document.getElementById("inp-pickup").value.trim();
+  const drop   = document.getElementById("inp-drop").value.trim();
+  const msg    = document.getElementById("form-msg");
+  const btn    = document.getElementById("btn-create-ride");
+
+  if (!pickup || !drop) {
+    msg.textContent = "⚠️ Enter both pickup and drop.";
+    msg.style.color = "var(--orange)";
+    return;
   }
 
-  // ── Manual dispatch ────────────────────────────────────
-  document.getElementById("btn-dispatch").addEventListener("click",async()=>{
-    const pickup=document.getElementById("ip").value.trim();
-    const drop=document.getElementById("id2").value.trim();
-    const msg=document.getElementById("form-msg");
-    const btn=document.getElementById("btn-dispatch");
-    if(!pickup||!drop){msg.textContent="⚠️ Enter both locations.";msg.style.color="var(--danger)";return;}
-    btn.disabled=true;btn.textContent="Dispatching…";msg.textContent="";
-    try{
-      const snap=await getDocs(query(collection(db,"drivers"),where("status","==","available")));
-      const ref=doc(collection(db,"rides"));
-      if(snap.empty){
-        await setDoc(ref,{pickup,drop,status:"pending",driverId:null,createdAt:serverTimestamp()});
-        msg.textContent="⏳ Queued — no drivers.";msg.style.color="var(--sub)";
-        toast("No drivers — ride queued","var(--warning)");
-      }else{
-        const dDoc=snap.docs[0],dId=dDoc.id,dData=dDoc.data();
-        await setDoc(ref,{pickup,drop,status:"assigned",driverId:dId,driverEmail:dData.email||dId,createdAt:serverTimestamp()});
-        await setDoc(doc(db,"drivers",dId),{status:"busy"},{merge:true});
-        msg.textContent=`✅ → ${dData.email||dId}`;msg.style.color="var(--success)";
-        toast(`Dispatched → ${dData.email||dId}`,"var(--success)");
-        document.getElementById("ip").value=document.getElementById("id2").value="";
-      }
-    }catch(e){msg.textContent="❌ Error.";msg.style.color="var(--danger)";console.error(e);}
-    btn.disabled=false;btn.innerHTML="<span>＋</span> Dispatch";
-  });
+  btn.disabled = true;
+  btn.textContent = "Dispatching…";
+  msg.textContent = "";
 
-  ["ip","id2"].forEach(id=>{
-    document.getElementById(id).addEventListener("keydown",e=>{if(e.key==="Enter")document.getElementById("btn-dispatch").click();});
+  try {
+    const snap = await getDocs(query(collection(db, "drivers"), where("status", "==", "available")));
+    const ref  = doc(collection(db, "rides"));
+
+    if (snap.empty) {
+      await setDoc(ref, { pickup, drop, status: "pending", driverId: null, createdAt: serverTimestamp() });
+      msg.textContent = "⏳ Queued — no drivers available.";
+      msg.style.color = "var(--sub)";
+      toast("No drivers — ride queued", "var(--orange)");
+    } else {
+      const dDoc = snap.docs[0], dId = dDoc.id, dData = dDoc.data();
+      await setDoc(ref, {
+        pickup, drop, status: "assigned",
+        driverId: dId, driverEmail: dData.email || dId,
+        createdAt: serverTimestamp(),
+      });
+      await setDoc(doc(db, "drivers", dId), { status: "busy" }, { merge: true });
+      const label = dData.email || dId;
+      msg.textContent = `✅ Assigned to ${label}`;
+      msg.style.color = "var(--green)";
+      toast(`Dispatched → ${label}`, "var(--green)");
+      document.getElementById("inp-pickup").value = "";
+      document.getElementById("inp-drop").value   = "";
+    }
+  } catch (e) {
+    msg.textContent = "❌ Error. Check console.";
+    msg.style.color = "var(--red)";
+    console.error(e);
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = "<span>＋</span> Dispatch Ride";
+});
+
+["inp-pickup", "inp-drop"].forEach(id => {
+  document.getElementById(id).addEventListener("keydown", e => {
+    if (e.key === "Enter") document.getElementById("btn-create-ride").click();
   });
+});
+
+// ── HELPER: relative time string ──────────────────────
+function relTime(dt) {
+  const diff = dt - Date.now();
+  if (diff < 0) return "Overdue";
+  const m = Math.round(diff / 60000);
+  if (m < 60) return `in ${m} min`;
+  const h = Math.floor(m / 60), rem = m % 60;
+  return rem > 0 ? `in ${h}h ${rem}m` : `in ${h}h`;
+}
 </script>
 </body>
 </html>

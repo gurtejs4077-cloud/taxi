@@ -2,265 +2,389 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>RideApp — Book a Ride</title>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
   <style>
-    :root{
-      --bg:#0a0a0f; --surface:#13131a; --card:#1a1a24; --border:#252535;
-      --accent:#f59e0b; --accent-d:#d97706; --glow:rgba(245,158,11,.18);
-      --success:#10b981; --danger:#f43f5e; --blue:#6366f1;
-      --text:#f0f0f8; --sub:#7c7c9a; --muted:#2a2a3a;
-      --safe-b:env(safe-area-inset-bottom,0px);
-    }
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    html{height:100%;-webkit-tap-highlight-color:transparent}
-    body{
-      background:var(--bg);color:var(--text);
-      font-family:'Plus Jakarta Sans',sans-serif;
-      min-height:100vh;display:flex;flex-direction:column;
-      background-image:radial-gradient(ellipse 80% 28% at 50% 0%,rgba(245,158,11,.09) 0%,transparent 60%);
-      overflow-x:hidden;
+    :root {
+      --bg:     #09090f;
+      --surf:   #111118;
+      --card:   #18181f;
+      --border: #242430;
+      --accent: #f59e0b;
+      --acc-d:  #d97706;
+      --glow:   rgba(245,158,11,.18);
+      --green:  #10b981;
+      --red:    #f43f5e;
+      --blue:   #6366f1;
+      --text:   #f1f1f8;
+      --sub:    #6b6b85;
+      --muted:  #2a2a38;
+      --sb:     env(safe-area-inset-bottom, 0px);
+      --r:      16px;
     }
 
-    /* ── Topbar ──────────────────────────────── */
-    #topbar{
-      position:sticky;top:0;z-index:100;
-      background:rgba(10,10,15,.93);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
-      border-bottom:1px solid var(--border);
-      padding:13px 18px;display:flex;align-items:center;justify-content:space-between;
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { height: 100%; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 16px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      background-image: radial-gradient(ellipse 80% 25% at 50% 0%, rgba(245,158,11,.07) 0%, transparent 60%);
     }
-    .tb-l{display:flex;align-items:center;gap:10px}
-    .mark{width:34px;height:34px;background:linear-gradient(135deg,var(--accent),var(--accent-d));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.95rem;flex-shrink:0}
-    .app-n{font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:800;color:#fff}
-    #greeting{font-size:.7rem;color:var(--sub);margin-top:1px;max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    #btn-out{background:transparent;border:1px solid var(--border);border-radius:9px;color:var(--sub);font-family:'Plus Jakarta Sans',sans-serif;font-size:.74rem;font-weight:600;padding:8px 12px;cursor:pointer;transition:border-color .2s,color .2s}
-    #btn-out:hover{border-color:var(--danger);color:var(--danger)}
 
-    /* ── Main scroll ─────────────────────────── */
-    #main{flex:1;overflow-y:auto;padding:18px 15px calc(28px + var(--safe-b));display:flex;flex-direction:column;gap:14px}
-
-    /* ── Card base ───────────────────────────── */
-    .card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:20px 17px;animation:up .35s ease}
-    @keyframes up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
-    .clabel{font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--sub);margin-bottom:14px}
-
-    /* ── Shared input style ───────────────────── */
-    .field{margin-bottom:12px}
-    .field label{display:block;font-size:.69rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--sub);margin-bottom:6px}
-    .iw{position:relative}
-    .iw .ic{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:.9rem;pointer-events:none;line-height:1}
-    .inp{
-      width:100%;background:var(--surface);border:1.5px solid var(--border);
-      border-radius:12px;color:var(--text);
-      font-family:'Plus Jakarta Sans',sans-serif;font-size:.95rem;
-      padding:13px 13px 13px 40px;outline:none;
-      transition:border-color .2s,box-shadow .2s;-webkit-appearance:none;
+    /* ── TOP BAR ───────────────────────────── */
+    #topbar {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(9,9,15,.95);
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 18px;
+      display: flex; align-items: center; justify-content: space-between;
     }
-    .inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--glow)}
-    .inp::placeholder{color:var(--muted)}
-    /* date/time inputs */
-    input[type="date"],input[type="time"]{color-scheme:dark}
+    .tb-l { display: flex; align-items: center; gap: 12px; }
+    .app-mark {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, var(--accent), var(--acc-d));
+      border-radius: 11px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.15rem; flex-shrink: 0;
+    }
+    .app-name    { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; color: #fff; }
+    #greeting    { font-size: 13px; color: var(--sub); margin-top: 2px; max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #btn-signout {
+      background: transparent;
+      border: 1px solid var(--border); border-radius: 10px;
+      color: var(--sub); font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 14px; font-weight: 600; padding: 10px 15px;
+      cursor: pointer; transition: border-color .2s, color .2s;
+      white-space: nowrap;
+    }
+    #btn-signout:active { border-color: var(--red); color: var(--red); }
+
+    /* ── SCROLL AREA ───────────────────────── */
+    #main {
+      flex: 1; overflow-y: auto;
+      padding: 18px 16px calc(32px + var(--sb));
+      display: flex; flex-direction: column; gap: 16px;
+    }
+
+    /* ── CARD BASE ─────────────────────────── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 20px 18px;
+      animation: up .3s ease;
+    }
+    @keyframes up { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
+    .card-title {
+      font-size: 12px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .1em;
+      color: var(--sub); margin-bottom: 16px;
+    }
+
+    /* ── FORM FIELDS ───────────────────────── */
+    .field { margin-bottom: 14px; }
+    .field-label {
+      display: block; font-size: 12px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .08em;
+      color: var(--sub); margin-bottom: 8px;
+    }
+    .fw { position: relative; }
+    .fi {
+      position: absolute; left: 15px; top: 50%;
+      transform: translateY(-50%);
+      font-size: 1rem; pointer-events: none; line-height: 1;
+    }
+    .inp {
+      width: 100%;
+      background: var(--surf); border: 1.5px solid var(--border);
+      border-radius: var(--r); color: var(--text);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 16px; /* prevents iOS zoom */
+      padding: 15px 15px 15px 46px;
+      outline: none; -webkit-appearance: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .inp:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--glow); }
+    .inp::placeholder { color: var(--muted); }
+    input[type="date"], input[type="time"] { color-scheme: dark; }
     input[type="date"]::-webkit-calendar-picker-indicator,
-    input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(.6)}
+    input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(.5); }
 
-    /* ── Location stack ──────────────────────── */
-    .loc-stack{margin-bottom:14px}
-    .loc-row{display:flex;align-items:center;gap:11px;padding:3px 0}
-    .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;background:var(--accent);border:2px solid var(--accent)}
-    .dot.d{background:transparent;border-color:var(--danger)}
-    .loc-line{width:2px;height:20px;background:var(--border);margin-left:4px;flex-shrink:0}
-    .loc-inp{
-      flex:1;background:var(--surface);border:1.5px solid var(--border);
-      border-radius:11px;color:var(--text);
-      font-family:'Plus Jakarta Sans',sans-serif;font-size:.95rem;
-      padding:12px 13px;outline:none;
-      transition:border-color .2s,box-shadow .2s;-webkit-appearance:none;
+    /* Location stack (with dot + line) */
+    .loc-stack { margin-bottom: 16px; }
+    .loc-row { display: flex; align-items: center; gap: 14px; padding: 3px 0; }
+    .ldot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; background: var(--accent); border: 2px solid var(--accent); }
+    .ldot.d { background: transparent; border-color: var(--red); }
+    .lline { width: 2px; height: 22px; background: var(--border); margin-left: 4.5px; flex-shrink: 0; }
+    .loc-inp {
+      flex: 1; background: var(--surf); border: 1.5px solid var(--border);
+      border-radius: var(--r); color: var(--text);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 16px; padding: 14px 14px;
+      outline: none; -webkit-appearance: none;
+      transition: border-color .2s, box-shadow .2s;
     }
-    .loc-inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--glow)}
-    .loc-inp::placeholder{color:var(--muted)}
+    .loc-inp:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--glow); }
+    .loc-inp::placeholder { color: var(--muted); }
 
-    /* ── Now / Schedule toggle ───────────────── */
-    .sched-tabs{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:4px;gap:4px;margin-bottom:14px}
-    .sched-tab{flex:1;padding:9px;border:none;border-radius:8px;background:transparent;color:var(--sub);font-family:'Plus Jakarta Sans',sans-serif;font-size:.84rem;font-weight:600;cursor:pointer;transition:all .2s}
-    .sched-tab.active{background:var(--card);color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,.4)}
-
-    /* Date/time row */
-    #datetime-row{display:none;gap:10px;margin-bottom:14px}
-    #datetime-row.show{display:flex}
-    #datetime-row .iw{flex:1}
-
-    /* ── Book button ─────────────────────────── */
-    #btn-book{
-      width:100%;border:none;border-radius:14px;
-      background:linear-gradient(135deg,var(--accent),var(--accent-d));
-      color:#000;font-family:'Plus Jakarta Sans',sans-serif;
-      font-size:1rem;font-weight:700;padding:15px;cursor:pointer;
-      display:flex;align-items:center;justify-content:center;gap:8px;
-      box-shadow:0 8px 24px rgba(245,158,11,.28);
-      transition:opacity .2s,transform .12s;
+    /* Now / Schedule toggle */
+    .sched-toggle {
+      display: flex; background: var(--surf);
+      border: 1px solid var(--border); border-radius: var(--r);
+      padding: 4px; gap: 4px; margin-bottom: 16px;
     }
-    #btn-book:active{transform:scale(.98)}
-    #btn-book:disabled{opacity:.4;cursor:not-allowed;box-shadow:none}
-    .spin{width:18px;height:18px;border:2.5px solid rgba(0,0,0,.2);border-top-color:#000;border-radius:50%;animation:spin .6s linear infinite;display:none}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    #book-msg{font-size:.79rem;text-align:center;margin-top:10px;min-height:16px;color:var(--sub)}
+    .st-btn {
+      flex: 1; padding: 12px; border: none; border-radius: 12px;
+      background: transparent; color: var(--sub);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 15px; font-weight: 600; cursor: pointer;
+      transition: all .2s;
+    }
+    .st-btn.active {
+      background: var(--card); color: var(--text);
+      box-shadow: 0 2px 10px rgba(0,0,0,.4);
+    }
 
-    /* ── Active ride card ────────────────────── */
-    #active-card{display:none}
-    #active-card.show{display:block}
+    .dt-row { display: none; gap: 10px; margin-bottom: 16px; }
+    .dt-row.show { display: flex; }
+    .dt-row .fw { flex: 1; }
 
-    /* Progress steps */
-    .steps{display:flex;align-items:flex-start;margin-bottom:18px}
-    .step{flex:1;text-align:center;position:relative}
-    .sdot{width:26px;height:26px;border-radius:50%;border:2px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;margin:0 auto 5px;font-size:.72rem;transition:all .4s}
-    .step.done .sdot{background:var(--success);border-color:var(--success)}
-    .step.active .sdot{background:var(--accent);border-color:var(--accent)}
-    .slbl{font-size:.63rem;font-weight:600;color:var(--sub)}
-    .step.done .slbl,.step.active .slbl{color:var(--text)}
-    .sline{position:absolute;top:12px;left:50%;width:100%;height:2px;background:var(--border);z-index:-1}
-    .step.done .sline{background:var(--success)}
+    /* Book button */
+    #btn-book {
+      width: 100%; border: none; border-radius: var(--r);
+      background: linear-gradient(135deg, var(--accent), var(--acc-d));
+      color: #000; font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 17px; font-weight: 700; padding: 16px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
+      box-shadow: 0 8px 24px rgba(245,158,11,.28);
+      transition: opacity .2s, transform .12s;
+    }
+    #btn-book:active  { transform: scale(.98); }
+    #btn-book:disabled{ opacity: .4; cursor: not-allowed; box-shadow: none; }
+
+    .spin {
+      width: 20px; height: 20px;
+      border: 2.5px solid rgba(0,0,0,.2); border-top-color: #000;
+      border-radius: 50%; animation: spin .6s linear infinite; display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #book-msg {
+      font-size: 14px; text-align: center;
+      margin-top: 12px; min-height: 18px; color: var(--sub);
+    }
+
+    /* ── ACTIVE RIDE CARD ──────────────────── */
+    #active-card { display: none; }
+    #active-card.show { display: block; }
+
+    /* Steps */
+    .steps { display: flex; margin-bottom: 20px; }
+    .step  { flex: 1; text-align: center; position: relative; }
+    .s-dot {
+      width: 32px; height: 32px; border-radius: 50%;
+      border: 2px solid var(--border); background: var(--surf);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 6px; font-size: .8rem;
+      transition: all .4s;
+    }
+    .step.done   .s-dot { background: var(--green); border-color: var(--green); }
+    .step.active .s-dot { background: var(--accent); border-color: var(--accent); }
+    .s-lbl { font-size: 12px; font-weight: 600; color: var(--sub); }
+    .step.done   .s-lbl,
+    .step.active .s-lbl { color: var(--text); }
+    .s-line {
+      position: absolute; top: 15px; left: 50%;
+      width: 100%; height: 2px; background: var(--border); z-index: -1;
+    }
+    .step.done .s-line { background: var(--green); }
 
     /* Status strip */
-    .s-strip{display:flex;align-items:center;gap:10px;background:var(--surface);border-radius:12px;padding:12px 13px;margin-bottom:13px}
-    .s-ico{font-size:1.3rem;flex-shrink:0}
-    .s-inf{flex:1;min-width:0}
-    .s-tit{font-weight:700;font-size:.9rem}
-    .s-sub2{font-size:.73rem;color:var(--sub);margin-top:2px}
-    .s-bdg{font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:4px 9px;border-radius:20px;flex-shrink:0;white-space:nowrap}
-    .sb-pending  {background:rgba(124,124,154,.15);color:var(--sub)}
-    .sb-scheduled{background:rgba(99,102,241,.12);color:#a5b4fc}
-    .sb-assigned {background:rgba(99,102,241,.15);color:#818cf8}
-    .sb-ongoing  {background:rgba(16,185,129,.15);color:var(--success)}
+    .s-strip {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--surf); border-radius: var(--r);
+      padding: 14px 15px; margin-bottom: 14px;
+    }
+    .s-ico  { font-size: 1.5rem; flex-shrink: 0; }
+    .s-inf  { flex: 1; min-width: 0; }
+    .s-tit  { font-size: 16px; font-weight: 700; }
+    .s-sub  { font-size: 13px; color: var(--sub); margin-top: 3px; }
+    .s-bdg  {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; padding: 6px 11px; border-radius: 20px; flex-shrink: 0;
+    }
+    .sb-pending   { background: rgba(107,107,133,.15); color: var(--sub); }
+    .sb-scheduled { background: rgba(99,102,241,.12);  color: #a5b4fc; }
+    .sb-assigned  { background: rgba(99,102,241,.15);  color: #818cf8; }
+    .sb-ongoing   { background: rgba(16,185,129,.15);  color: var(--green); }
+
+    /* Scheduled banner */
+    .sched-banner {
+      display: flex; align-items: flex-start; gap: 12px;
+      background: rgba(99,102,241,.1); border: 1px solid rgba(99,102,241,.25);
+      border-radius: var(--r); padding: 14px 15px; margin-bottom: 14px;
+    }
+    .sched-banner .ico { font-size: 1.2rem; margin-top: 1px; }
+    .sched-dt  { font-size: 15px; font-weight: 700; color: #c7d2fe; }
+    .sched-sub { font-size: 13px; color: #818cf8; margin-top: 3px; }
 
     /* Route box */
-    .rbox{background:var(--surface);border-radius:12px;padding:13px 14px;margin-bottom:12px}
-    .rrow{display:flex;align-items:flex-start;gap:10px;padding:4px 0}
-    .rico{font-size:.95rem;margin-top:2px;flex-shrink:0}
-    .rlbl{font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--sub)}
-    .rval{font-size:.88rem;font-weight:600;color:var(--text);margin-top:1px}
-    .rsep{width:2px;height:13px;background:var(--border);margin-left:7px}
-
-    /* Scheduled time banner */
-    .sched-banner{
-      display:flex;align-items:center;gap:10px;
-      background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.25);
-      border-radius:11px;padding:11px 13px;margin-bottom:12px;
+    .route-box {
+      background: var(--surf); border-radius: var(--r);
+      padding: 16px; margin-bottom: 14px;
     }
-    .sched-banner .icon{font-size:1.1rem;flex-shrink:0}
-    .sched-banner .text{font-size:.82rem;font-weight:600;color:#c7d2fe}
-    .sched-banner .sub{font-size:.72rem;color:#818cf8;margin-top:2px}
+    .r-row { display: flex; align-items: flex-start; gap: 12px; padding: 6px 0; }
+    .r-ico  { font-size: 1.05rem; margin-top: 2px; flex-shrink: 0; }
+    .r-lbl  { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--sub); }
+    .r-val  { font-size: 15px; font-weight: 600; color: var(--text); margin-top: 2px; }
+    .r-sep  { width: 2px; height: 14px; background: var(--border); margin-left: 9px; }
 
     /* Cancel */
-    #btn-cancel{
-      width:100%;background:transparent;border:1.5px solid var(--border);
-      border-radius:12px;color:var(--sub);
-      font-family:'Plus Jakarta Sans',sans-serif;font-size:.9rem;font-weight:600;
-      padding:13px;cursor:pointer;transition:border-color .2s,color .2s;
+    #btn-cancel {
+      width: 100%; background: transparent;
+      border: 1.5px solid var(--border); border-radius: var(--r);
+      color: var(--sub); font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 15px; font-weight: 600; padding: 14px;
+      cursor: pointer; transition: border-color .2s, color .2s;
     }
-    #btn-cancel:hover{border-color:var(--danger);color:var(--danger)}
-    #btn-cancel:disabled{opacity:.35;cursor:not-allowed}
+    #btn-cancel:active { border-color: var(--red); color: var(--red); }
+    #btn-cancel:disabled { opacity: .35; cursor: not-allowed; }
 
-    /* ── History ─────────────────────────────── */
-    .hem{text-align:center;color:var(--sub);font-size:.82rem;padding:18px 0}
-    .hi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 13px;margin-bottom:9px}
-    .hi-rt{display:flex;align-items:center;gap:5px;font-size:.86rem;font-weight:600;margin-bottom:5px}
-    .hi-bt{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px}
-    .hi-date{font-size:.7rem;color:var(--sub)}
-    .hi-st{font-size:.69rem;font-weight:700;text-transform:uppercase;padding:3px 8px;border-radius:20px}
-    .hs-completed{background:rgba(16,185,129,.12);color:var(--success)}
-    .hs-rejected {background:rgba(244,63,94,.12);color:#fb7185}
-    .hs-cancelled{background:rgba(124,124,154,.12);color:var(--sub)}
-    .hi-sched{font-size:.7rem;color:#a5b4fc;margin-top:4px}
-
-    /* ── Toast ───────────────────────────────── */
-    #toast{
-      position:fixed;bottom:calc(20px + var(--safe-b));left:50%;
-      transform:translateX(-50%) translateY(90px);
-      background:var(--card);border:1px solid var(--border);border-left:3px solid var(--accent);
-      border-radius:12px;padding:12px 20px;font-size:.84rem;font-weight:600;
-      color:var(--text);z-index:999;white-space:nowrap;
-      transition:transform .35s cubic-bezier(.34,1.4,.64,1);
+    /* ── HISTORY ───────────────────────────── */
+    .h-empty { text-align: center; color: var(--sub); font-size: 14px; padding: 20px 0; }
+    .h-item {
+      background: var(--surf); border: 1px solid var(--border);
+      border-radius: var(--r); padding: 14px 15px; margin-bottom: 10px;
     }
-    #toast.show{transform:translateX(-50%) translateY(0)}
+    .h-route {
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+      font-size: 15px; font-weight: 600; margin-bottom: 8px;
+    }
+    .h-meta {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 6px;
+    }
+    .h-date { font-size: 13px; color: var(--sub); }
+    .h-st   { font-size: 12px; font-weight: 700; text-transform: uppercase; padding: 4px 10px; border-radius: 20px; }
+    .hs-completed { background: rgba(16,185,129,.12); color: var(--green); }
+    .hs-rejected  { background: rgba(244,63,94,.12);  color: #fb7185; }
+    .hs-cancelled { background: rgba(107,107,133,.12); color: var(--sub); }
+    .h-sched { font-size: 13px; color: #a5b4fc; margin-bottom: 6px; }
+
+    /* ── TOAST ─────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: calc(20px + var(--sb)); left: 50%;
+      transform: translateX(-50%) translateY(90px);
+      background: var(--card); border: 1px solid var(--border);
+      border-left: 3px solid var(--accent); border-radius: 14px;
+      padding: 14px 22px; font-size: 15px; font-weight: 600;
+      color: var(--text); z-index: 999; white-space: nowrap;
+      transition: transform .35s cubic-bezier(.34,1.4,.64,1);
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
   </style>
 </head>
 <body>
 
+<!-- TOP BAR -->
 <div id="topbar">
   <div class="tb-l">
-    <div class="mark">🚕</div>
+    <div class="app-mark">🚕</div>
     <div>
-      <div class="app-n">RideApp</div>
+      <div class="app-name">RideApp</div>
       <div id="greeting">Loading…</div>
     </div>
   </div>
-  <button id="btn-out">Sign Out</button>
+  <button id="btn-signout">Sign Out</button>
 </div>
 
+<!-- MAIN SCROLL -->
 <div id="main">
 
   <!-- ══ BOOK CARD ══ -->
   <div class="card" id="book-card">
-    <div class="clabel">Book a Ride</div>
+    <div class="card-title">Book a Ride</div>
 
-    <!-- Route -->
+    <!-- Pickup / Drop -->
     <div class="loc-stack">
       <div class="loc-row">
-        <div class="dot"></div>
+        <div class="ldot"></div>
         <input class="loc-inp" type="text" id="inp-pickup" placeholder="Pickup location"/>
       </div>
-      <div style="display:flex;padding:0 4px"><div class="loc-line"></div></div>
+      <div style="display:flex;padding:0 5px"><div class="lline"></div></div>
       <div class="loc-row">
-        <div class="dot d"></div>
-        <input class="loc-inp" type="text" id="inp-drop" placeholder="Drop / destination"/>
+        <div class="ldot d"></div>
+        <input class="loc-inp" type="text" id="inp-drop" placeholder="Destination / drop"/>
       </div>
     </div>
 
     <!-- Phone -->
     <div class="field">
-      <label>📞 Your Phone Number</label>
-      <div class="iw">
-        <span class="ic">📱</span>
-        <input class="inp" type="tel" id="inp-phone" placeholder="+91 98765 43210" inputmode="tel"/>
+      <label class="field-label">📞 Your Phone Number</label>
+      <div class="fw">
+        <span class="fi">📱</span>
+        <input class="inp" type="tel" id="inp-phone"
+          placeholder="+91 98765 43210" inputmode="tel" autocomplete="tel"/>
       </div>
     </div>
 
-    <!-- Now / Schedule toggle -->
-    <div class="sched-tabs">
-      <button class="sched-tab active" id="tab-now"      type="button">⚡ Ride Now</button>
-      <button class="sched-tab"        id="tab-schedule" type="button">📅 Schedule</button>
+    <!-- Now / Schedule -->
+    <div class="sched-toggle">
+      <button class="st-btn active" id="tab-now"      type="button">⚡ Ride Now</button>
+      <button class="st-btn"        id="tab-sched"    type="button">📅 Schedule</button>
     </div>
 
-    <!-- Date + Time (hidden unless Schedule) -->
-    <div id="datetime-row">
-      <div class="iw">
-        <span class="ic">📅</span>
-        <input class="inp" type="date" id="inp-date" style="padding-left:40px"/>
+    <!-- Date + Time (hidden by default) -->
+    <div class="dt-row" id="dt-row">
+      <div class="fw">
+        <span class="fi">📅</span>
+        <input class="inp" type="date" id="inp-date" style="padding-left:46px"/>
       </div>
-      <div class="iw">
-        <span class="ic">🕐</span>
-        <input class="inp" type="time" id="inp-time" style="padding-left:40px"/>
+      <div class="fw">
+        <span class="fi">🕐</span>
+        <input class="inp" type="time" id="inp-time" style="padding-left:46px"/>
       </div>
     </div>
 
     <button id="btn-book">
       <div class="spin" id="bspin"></div>
-      <span id="blabel">🚕 Request Ride</span>
+      <span id="blbl">🚕 Request Ride</span>
     </button>
     <div id="book-msg"></div>
   </div>
 
-  <!-- ══ ACTIVE RIDE CARD ══ -->
+  <!-- ══ ACTIVE RIDE ══ -->
   <div class="card" id="active-card">
-    <div class="clabel">Your Ride</div>
+    <div class="card-title">Your Ride</div>
 
     <!-- Steps -->
     <div class="steps">
-      <div class="step" id="st0"><div class="sdot">📋</div><div class="slbl">Sent</div><div class="sline"></div></div>
-      <div class="step" id="st1"><div class="sdot">👤</div><div class="slbl">Assigned</div><div class="sline"></div></div>
-      <div class="step" id="st2"><div class="sdot">🚗</div><div class="slbl">On Way</div><div class="sline"></div></div>
-      <div class="step" id="st3"><div class="sdot">✅</div><div class="slbl">Done</div></div>
+      <div class="step" id="st0">
+        <div class="s-dot">📋</div><div class="s-lbl">Sent</div>
+        <div class="s-line"></div>
+      </div>
+      <div class="step" id="st1">
+        <div class="s-dot">👤</div><div class="s-lbl">Assigned</div>
+        <div class="s-line"></div>
+      </div>
+      <div class="step" id="st2">
+        <div class="s-dot">🚗</div><div class="s-lbl">On Way</div>
+        <div class="s-line"></div>
+      </div>
+      <div class="step" id="st3">
+        <div class="s-dot">✅</div><div class="s-lbl">Done</div>
+      </div>
     </div>
 
     <!-- Status strip -->
@@ -268,37 +392,43 @@
       <div class="s-ico" id="sico">⏳</div>
       <div class="s-inf">
         <div class="s-tit" id="stit">Finding a driver…</div>
-        <div class="s-sub2" id="ssub">Your request is with the admin</div>
+        <div class="s-sub" id="ssub">Your request is with the admin</div>
       </div>
-      <div class="s-bdg sb-pending" id="sbdg">pending</div>
+      <div class="s-bdg sb-pending" id="sbdg">Pending</div>
     </div>
 
-    <!-- Scheduled time banner (shown for advance bookings) -->
+    <!-- Scheduled banner (only shown for advance bookings) -->
     <div class="sched-banner" id="sched-banner" style="display:none">
-      <div class="icon">📅</div>
+      <div class="ico">📅</div>
       <div>
-        <div class="text" id="sched-banner-text">Scheduled Ride</div>
-        <div class="sub" id="sched-banner-sub">Driver will be notified before your ride time</div>
+        <div class="sched-dt"  id="sched-dt-text">Scheduled ride</div>
+        <div class="sched-sub" id="sched-sub-text">Driver will be reminded before your ride time</div>
       </div>
     </div>
 
     <!-- Route -->
-    <div class="rbox">
-      <div class="rrow"><div class="rico">📍</div><div><div class="rlbl">Pickup</div><div class="rval" id="a-pickup">—</div></div></div>
-      <div class="rsep"></div>
-      <div class="rrow"><div class="rico">🏁</div><div><div class="rlbl">Drop</div><div class="rval" id="a-drop">—</div></div></div>
+    <div class="route-box">
+      <div class="r-row">
+        <div class="r-ico">📍</div>
+        <div><div class="r-lbl">Pickup</div><div class="r-val" id="a-pickup">—</div></div>
+      </div>
+      <div class="r-sep"></div>
+      <div class="r-row">
+        <div class="r-ico">🏁</div>
+        <div><div class="r-lbl">Drop</div><div class="r-val" id="a-drop">—</div></div>
+      </div>
     </div>
 
     <button id="btn-cancel">Cancel Ride</button>
   </div>
 
-  <!-- ══ HISTORY ══ -->
+  <!-- ══ PAST RIDES ══ -->
   <div class="card" id="hist-card">
-    <div class="clabel">Past Rides <span id="hcount" style="color:var(--sub)"></span></div>
-    <div id="hlist"><div class="hem">No rides yet.</div></div>
+    <div class="card-title">Past Rides <span id="hcnt" style="color:var(--sub)"></span></div>
+    <div id="hlist"><div class="h-empty">No rides yet.</div></div>
   </div>
 
-</div>
+</div><!-- /main -->
 
 <div id="toast"></div>
 
@@ -309,52 +439,58 @@
     onSnapshot, query, where, orderBy, serverTimestamp,
   } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-  // ── Auth ──────────────────────────────────────────────
+  // ── AUTH ────────────────────────────────────────────
   const { user, name, email } = await requireAuth("customer");
   const uid = user.uid;
-  document.getElementById("greeting").textContent = `Hi, ${name || email}`;
-  document.getElementById("btn-out").addEventListener("click", async () => { await logoutUser(); window.location.href = "login.html"; });
 
-  // ── Toast ──────────────────────────────────────────────
-  function toast(msg, color="var(--accent)") {
+  document.getElementById("greeting").textContent  = `Hi, ${name || email}`;
+  document.getElementById("btn-signout").addEventListener("click", async () => {
+    await logoutUser();
+    window.location.href = "login.html";
+  });
+
+  // ── TOAST ────────────────────────────────────────────
+  function toast(msg, color = "var(--accent)") {
     const el = document.getElementById("toast");
-    el.textContent = msg; el.style.borderLeftColor = color;
-    el.classList.add("show"); setTimeout(() => el.classList.remove("show"), 3400);
+    el.textContent = msg;
+    el.style.borderLeftColor = color;
+    el.classList.add("show");
+    setTimeout(() => el.classList.remove("show"), 3500);
   }
 
-  // ── Now / Schedule toggle ─────────────────────────────
+  // ── NOW / SCHEDULE TOGGLE ────────────────────────────
   let isScheduled = false;
 
-  // Set min date to today
-  const today = new Date();
-  document.getElementById("inp-date").min = today.toISOString().split("T")[0];
-  document.getElementById("inp-date").value = today.toISOString().split("T")[0];
-
-  // Set min time to now + 30min
-  const padded = t => String(t).padStart(2,"0");
-  const d30 = new Date(Date.now() + 30*60000);
-  document.getElementById("inp-time").value = `${padded(d30.getHours())}:${padded(d30.getMinutes())}`;
+  // Prefill date to today, time to now + 30 min
+  const pad = n => String(n).padStart(2, "0");
+  const now30 = new Date(Date.now() + 30 * 60000);
+  document.getElementById("inp-date").min   = new Date().toISOString().split("T")[0];
+  document.getElementById("inp-date").value = new Date().toISOString().split("T")[0];
+  document.getElementById("inp-time").value = `${pad(now30.getHours())}:${pad(now30.getMinutes())}`;
 
   document.getElementById("tab-now").addEventListener("click", () => {
     isScheduled = false;
     document.getElementById("tab-now").classList.add("active");
-    document.getElementById("tab-schedule").classList.remove("active");
-    document.getElementById("datetime-row").classList.remove("show");
-    document.getElementById("blabel").textContent = "🚕 Request Ride";
+    document.getElementById("tab-sched").classList.remove("active");
+    document.getElementById("dt-row").classList.remove("show");
+    document.getElementById("blbl").textContent = "🚕 Request Ride";
   });
-  document.getElementById("tab-schedule").addEventListener("click", () => {
+  document.getElementById("tab-sched").addEventListener("click", () => {
     isScheduled = true;
-    document.getElementById("tab-schedule").classList.add("active");
+    document.getElementById("tab-sched").classList.add("active");
     document.getElementById("tab-now").classList.remove("active");
-    document.getElementById("datetime-row").classList.add("show");
-    document.getElementById("blabel").textContent = "📅 Schedule Ride";
+    document.getElementById("dt-row").classList.add("show");
+    document.getElementById("blbl").textContent = "📅 Schedule Ride";
   });
 
-  // ── State ──────────────────────────────────────────────
+  // ── STATE ────────────────────────────────────────────
   let activeRideId = null;
 
-  // ── Book ───────────────────────────────────────────────
+  // ── BOOK RIDE ────────────────────────────────────────
   document.getElementById("btn-book").addEventListener("click", bookRide);
+  ["inp-pickup", "inp-drop", "inp-phone"].forEach(id =>
+    document.getElementById(id).addEventListener("keydown", e => { if (e.key === "Enter") bookRide(); })
+  );
 
   async function bookRide() {
     const pickup = document.getElementById("inp-pickup").value.trim();
@@ -363,29 +499,41 @@
     const msg    = document.getElementById("book-msg");
 
     msg.textContent = "";
-    msg.style.color = "var(--sub)";
+    msg.style.color  = "var(--sub)";
 
-    if (!pickup || !drop) { msg.textContent = "⚠️ Enter pickup and drop."; msg.style.color="var(--danger)"; return; }
-    if (!phone)           { msg.textContent = "⚠️ Enter your phone number."; msg.style.color="var(--danger)"; return; }
-    if (activeRideId)     { msg.textContent = "⚠️ You already have an active ride."; msg.style.color="var(--danger)"; return; }
+    if (!pickup || !drop) {
+      msg.textContent = "⚠️ Enter pickup and destination.";
+      msg.style.color = "var(--red)"; return;
+    }
+    if (!phone) {
+      msg.textContent = "⚠️ Enter your phone number.";
+      msg.style.color = "var(--red)"; return;
+    }
+    if (activeRideId) {
+      msg.textContent = "⚠️ You already have an active ride.";
+      msg.style.color = "var(--red)"; return;
+    }
 
-    // Validate scheduled time
+    // Validate schedule
     let scheduledAt = null;
-    let scheduledISO = null;
     if (isScheduled) {
-      const dateVal = document.getElementById("inp-date").value;
-      const timeVal = document.getElementById("inp-time").value;
-      if (!dateVal || !timeVal) { msg.textContent="⚠️ Pick a date and time."; msg.style.color="var(--danger)"; return; }
-      scheduledAt  = new Date(`${dateVal}T${timeVal}`);
-      if (scheduledAt < new Date(Date.now() + 25*60000)) {
-        msg.textContent = "⚠️ Schedule at least 30 min from now."; msg.style.color="var(--danger)"; return;
+      const dv = document.getElementById("inp-date").value;
+      const tv = document.getElementById("inp-time").value;
+      if (!dv || !tv) {
+        msg.textContent = "⚠️ Pick a date and time.";
+        msg.style.color = "var(--red)"; return;
       }
-      scheduledISO = scheduledAt.toISOString();
+      scheduledAt = new Date(`${dv}T${tv}`);
+      if (scheduledAt < new Date(Date.now() + 25 * 60000)) {
+        msg.textContent = "⚠️ Schedule at least 30 min from now.";
+        msg.style.color = "var(--red)"; return;
+      }
     }
 
     const btn  = document.getElementById("btn-book");
     const spin = document.getElementById("bspin");
-    btn.disabled = true; spin.style.display = "block";
+    btn.disabled = true;
+    spin.style.display = "block";
 
     try {
       await addDoc(collection(db, "ride_requests"), {
@@ -393,41 +541,47 @@
         customerName:  name || email,
         customerEmail: email,
         customerPhone: phone,
-        pickup, drop,
-        status:        "pending",
-        isScheduled:   isScheduled,
-        scheduledAt:   scheduledISO || null,   // ISO string — easy to compare/sort
-        scheduledTs:   scheduledAt  || null,   // Firestore Timestamp equivalent stored as string
-        driverId:      null,
-        createdAt:     serverTimestamp(),
+        pickup,
+        drop,
+        status:      "pending",
+        isScheduled: isScheduled,
+        scheduledAt: scheduledAt ? scheduledAt.toISOString() : null,
+        driverId:    null,
+        createdAt:   serverTimestamp(),
       });
 
       document.getElementById("inp-pickup").value = "";
       document.getElementById("inp-drop").value   = "";
-      // Keep phone for convenience, keep date/time
-      toast(isScheduled ? `📅 Ride scheduled for ${scheduledAt.toLocaleString()}!` : "🚕 Ride requested! Admin will dispatch soon.", "var(--success)");
-    } catch(err) {
+
+      const confirmMsg = isScheduled
+        ? `📅 Ride scheduled for ${scheduledAt.toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}!`
+        : "🚕 Ride requested! Admin will assign a driver.";
+      toast(confirmMsg, "var(--green)");
+
+    } catch (err) {
       console.error("[Book]", err);
-      msg.textContent = "❌ Failed. Try again."; msg.style.color="var(--danger)";
+      msg.textContent = "❌ Failed to request. Try again.";
+      msg.style.color  = "var(--red)";
     }
 
-    btn.disabled = false; spin.style.display = "none";
+    btn.disabled = false;
+    spin.style.display = "none";
   }
 
-  // ── Active ride listener ───────────────────────────────
+  // ── ACTIVE RIDE LISTENER ─────────────────────────────
   onSnapshot(
     query(
       collection(db, "ride_requests"),
       where("customerId", "==", uid),
-      where("status", "in", ["pending","dispatched","assigned","ongoing"])
+      where("status", "in", ["pending", "dispatched", "assigned", "ongoing"])
     ),
-    (snap) => {
+    snap => {
       if (!snap.empty) {
         const d = snap.docs[0];
         activeRideId = d.id;
         renderActive(d.data());
         document.getElementById("active-card").classList.add("show");
-        document.getElementById("book-card").style.opacity = ".45";
+        document.getElementById("book-card").style.opacity = ".4";
         document.getElementById("book-card").style.pointerEvents = "none";
       } else {
         activeRideId = null;
@@ -443,86 +597,89 @@
     document.getElementById("a-drop").textContent   = r.drop   || "—";
 
     const map = {
-      pending:    { step:0, ico:"⏳", tit:"Finding a driver…",        sub:"Your request is with the admin",    bdg:"sb-pending"   },
-      dispatched: { step:1, ico:"👤", tit:"Driver assigned",           sub:"Driver notified, heading to you",   bdg:"sb-assigned"  },
-      assigned:   { step:1, ico:"👤", tit:"Driver is coming",          sub:"Your driver accepted the ride",     bdg:"sb-assigned"  },
-      ongoing:    { step:2, ico:"🚗", tit:"Ride in progress",          sub:"Enjoy your ride!",                  bdg:"sb-ongoing"   },
+      pending:    { step: 0, ico: "⏳", tit: "Finding a driver…",   sub: "Your request is with the admin",    bdg: "sb-pending"   },
+      dispatched: { step: 1, ico: "👤", tit: "Driver assigned",      sub: "A driver has been notified",        bdg: "sb-assigned"  },
+      assigned:   { step: 1, ico: "👤", tit: "Driver is coming",     sub: "Your driver accepted the ride",     bdg: "sb-assigned"  },
+      ongoing:    { step: 2, ico: "🚗", tit: "Ride in progress",     sub: "Enjoy your ride!",                  bdg: "sb-ongoing"   },
     };
     const info = map[r.status] || map.pending;
 
-    // Steps
-    [0,1,2,3].forEach(i => {
-      const el = document.getElementById("st"+i);
-      el.classList.remove("done","active");
+    // Progress steps
+    [0, 1, 2, 3].forEach(i => {
+      const el = document.getElementById("st" + i);
+      el.classList.remove("done", "active");
       if (i <  info.step) el.classList.add("done");
       if (i === info.step) el.classList.add("active");
     });
 
-    // Strip
+    // Status strip
     document.getElementById("sico").textContent = info.ico;
     document.getElementById("stit").textContent = info.tit;
     document.getElementById("ssub").textContent = info.sub;
     const bdg = document.getElementById("sbdg");
-    bdg.className  = "s-bdg " + info.bdg;
+    bdg.className   = "s-bdg " + info.bdg;
     bdg.textContent = r.status;
 
     // Scheduled banner
     const banner = document.getElementById("sched-banner");
     if (r.isScheduled && r.scheduledAt) {
       const dt = new Date(r.scheduledAt);
-      document.getElementById("sched-banner-text").textContent = `Scheduled: ${dt.toLocaleString([], {dateStyle:"medium",timeStyle:"short"})}`;
-      document.getElementById("sched-banner-sub").textContent  = "Driver will be reminded before your ride";
+      document.getElementById("sched-dt-text").textContent  = `Scheduled: ${dt.toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}`;
+      document.getElementById("sched-sub-text").textContent = "Driver will be reminded 30 min before";
       banner.style.display = "flex";
     } else {
       banner.style.display = "none";
     }
 
-    document.getElementById("btn-cancel").disabled = r.status !== "pending";
+    // Cancel only while still pending
+    document.getElementById("btn-cancel").disabled = (r.status !== "pending");
   }
 
   // Cancel
   document.getElementById("btn-cancel").addEventListener("click", async () => {
     if (!activeRideId) return;
-    const btn = document.getElementById("btn-cancel");
-    btn.disabled = true;
+    document.getElementById("btn-cancel").disabled = true;
     try {
       await updateDoc(doc(db, "ride_requests", activeRideId), { status: "cancelled" });
       toast("Ride cancelled.", "var(--sub)");
-    } catch(e) { btn.disabled = false; }
+    } catch (e) {
+      document.getElementById("btn-cancel").disabled = false;
+    }
   });
 
-  // ── History ────────────────────────────────────────────
+  // ── HISTORY ──────────────────────────────────────────
   onSnapshot(
     query(
       collection(db, "ride_requests"),
       where("customerId", "==", uid),
-      where("status", "in", ["completed","rejected","cancelled"]),
+      where("status", "in", ["completed", "rejected", "cancelled"]),
       orderBy("createdAt", "desc")
     ),
-    (snap) => {
+    snap => {
       const list  = document.getElementById("hlist");
-      const count = document.getElementById("hcount");
+      const count = document.getElementById("hcnt");
       count.textContent = snap.size ? `(${snap.size})` : "";
       list.innerHTML = "";
-      if (snap.empty) { list.innerHTML='<div class="hem">No rides yet.</div>'; return; }
+      if (snap.empty) { list.innerHTML = '<div class="h-empty">No rides yet.</div>'; return; }
+
       snap.forEach(d => {
         const r    = d.data();
         const date = r.createdAt?.toDate ? r.createdAt.toDate().toLocaleDateString() : "—";
-        const schedText = r.isScheduled && r.scheduledAt
-          ? `📅 ${new Date(r.scheduledAt).toLocaleString([],{dateStyle:"short",timeStyle:"short"})}`
-          : null;
+        const sched = r.isScheduled && r.scheduledAt
+          ? `<div class="h-sched">📅 ${new Date(r.scheduledAt).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}</div>`
+          : "";
         const item = document.createElement("div");
-        item.className = "hi";
+        item.className = "h-item";
         item.innerHTML = `
-          <div class="hi-rt">
-            <span>📍 ${r.pickup||"—"}</span>
+          <div class="h-route">
+            <span>📍 ${r.pickup || "—"}</span>
             <span style="color:var(--muted)">→</span>
-            <span>🏁 ${r.drop||"—"}</span>
+            <span>🏁 ${r.drop || "—"}</span>
           </div>
-          ${schedText ? `<div class="hi-sched">${schedText}</div>` : ""}
-          <div class="hi-bt">
-            <span class="hi-date">${date}</span>
-            <span class="hi-st hs-${r.status}">${r.status}</span>
+          ${sched}
+          <div class="h-meta">
+            <span class="h-date">${date}</span>
+            <span class="h-st hs-${r.status}">${r.status}</span>
           </div>`;
         list.appendChild(item);
       });

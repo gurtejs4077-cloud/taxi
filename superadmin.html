@@ -109,6 +109,24 @@
   *{
     -webkit-overflow-scrolling: touch;
   }
+
+  /* ===== SUPERADMIN TAB BAR — scroll horizontally; no flex-shrink overlap ===== */
+  #tabs{
+    flex-wrap: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+  #tabs .tb{
+    flex: 0 0 auto !important;
+    min-width: max-content !important;
+    padding: 12px 14px !important;
+    height: auto !important;
+    min-height: 44px;
+    letter-spacing: 0.02em !important;
+  }
+  #tabs .tb .ndot{
+    right: 8px;
+  }
 }
 
 @media (max-width: 768px){

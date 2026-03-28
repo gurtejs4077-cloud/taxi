@@ -132,20 +132,6 @@
 }
 
 @media (max-width: 768px){
-
-  /* Make map take HALF screen */
-  #map-wrap{
-    height: 50vh !important;
-    min-height: 300px; /* safety for small phones */
-  }
-
-  /* Make sidebar take remaining space */
-  #sidebar{
-    height: 50vh !important;
-    overflow-y: auto;
-  }
-
-  /* Smooth scroll feel */
   #sidebar, #map-wrap{
     -webkit-overflow-scrolling: touch;
   }
@@ -222,10 +208,54 @@
     #map-label strong { display: block; font-family: 'Syne', sans-serif; font-size: 15px; color: var(--text); }
     #map-label span   { font-size: 12px; color: var(--sub); }
 
+    #splitter.app-splitter { display: none; }
+
     @media (max-width: 768px) {
       #app { flex-direction: column; }
-      #map-wrap { height: 180px; flex: none; order: -1; }
-      #sidebar { width: 100%; min-width: 0; flex: 1; border-right: none; border-top: 1px solid var(--border); }
+      #map-wrap {
+        height: min(38vh, 280px);
+        min-height: 110px;
+        max-height: min(82vh, calc(100dvh - 200px));
+        flex: none;
+        flex-shrink: 0;
+        order: -1;
+        width: 100%;
+      }
+      #splitter.app-splitter {
+        display: flex;
+        flex-shrink: 0;
+        order: 0;
+        height: 22px;
+        align-items: center;
+        justify-content: center;
+        background: var(--surface);
+        border-top: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+        cursor: row-resize;
+        touch-action: none;
+        -webkit-user-select: none;
+        user-select: none;
+        z-index: 2;
+      }
+      #splitter.app-splitter::after {
+        content: "";
+        width: 44px;
+        height: 5px;
+        border-radius: 99px;
+        background: var(--muted);
+      }
+      #splitter.app-splitter.dragging::after { background: var(--accent); }
+      body.map-split-dragging { touch-action: none; -webkit-user-select: none; user-select: none; }
+      body.map-split-dragging #map-wrap { pointer-events: none; }
+      #sidebar {
+        width: 100%;
+        min-width: 0;
+        min-height: 0;
+        flex: 1;
+        border-right: none;
+        border-top: none;
+        order: 1;
+      }
     }
 
     /* ═══════════════════════════════════════════════
@@ -683,6 +713,8 @@
 
 </div><!-- /sidebar -->
 
+<div id="splitter" class="app-splitter" role="separator" aria-orientation="horizontal" aria-label="Drag to resize map and panel"></div>
+
 <!-- ═══════════════ MAP ═══════════════ -->
 <div id="map-wrap">
   <div id="map"></div>
@@ -697,6 +729,7 @@
 ═══════════════════════════════════════════════ -->
 <script type="module">
 import { requireAuth, logoutUser, promoteUser, db } from "./auth.js";
+import { initMapSidebarSplit } from "./map-sidebar-split.js";
 import { initRideAppNotifications, createAppNotification } from "./notifications.js";
 import {
   collection, doc,
@@ -731,6 +764,7 @@ const map = L.map("map").setView([30.9, 75.85], 12);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   attribution: "© OpenStreetMap contributors"
 }).addTo(map);
+initMapSidebarSplit({ storageKey: "rideapp-super-map-px", getMap: () => map });
 const mkrs = {};
 
 // ── Toast ────────────────────────────────────────────────────

@@ -7,6 +7,119 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  
+  
+
+
+  <style>
+
+  /* ================================
+   🔥 MOBILE UX UPGRADE PACK
+   ================================ */
+@media (max-width: 768px){
+
+  :root{
+    font-size: 18px; /* base scale up */
+  }
+
+  /* ===== TEXT IMPROVEMENT ===== */
+  body{
+    line-height: 1.5;
+  }
+
+  .clabel, .flabel, .rlbl, .l, .sec{
+    font-size: 13px !important;
+    font-weight: 800 !important;
+    letter-spacing: .05em;
+    color: #a5b4fc !important;
+  }
+
+  .app-n, .app-t, .logo-t h1{
+    font-size: 20px !important;
+  }
+
+  /* ===== INPUTS ===== */
+  input, .inp, .linp, .finp{
+    height: 56px !important;
+    font-size: 17px !important;
+    border-radius: 16px !important;
+    padding: 16px 16px 16px 48px !important;
+  }
+
+  /* ===== BUTTONS (VERY IMPORTANT) ===== */
+  button, .act-btn, .btn-bc, .btn-self, .btn-rej,
+  #btn-book, #btn-go, #btn-complete, .dis-btn{
+    height: 56px !important;
+    font-size: 17px !important;
+    border-radius: 16px !important;
+  }
+
+  /* make primary buttons more obvious */
+  #btn-book, #btn-go, .btn-bc{
+    font-size: 18px !important;
+    font-weight: 800 !important;
+  }
+
+  /* ===== CARD SPACING ===== */
+  .card, .req-card, .drv-card{
+    padding: 20px !important;
+    border-radius: 18px !important;
+  }
+
+  #main, .panel{
+    padding: 18px !important;
+    gap: 16px !important;
+  }
+
+  /* ===== TAP FRIENDLY LISTS ===== */
+  .h-item, .req-card, .drv-card{
+    margin-bottom: 12px !important;
+  }
+
+  /* ===== ROUTE TEXT CLEAN ===== */
+  .req-route, .rval{
+    font-size: 15px !important;
+    line-height: 1.6;
+  }
+
+  /* ===== FIX SMALL CLICK AREAS ===== */
+  .phone-btn, .active-phone, .popup-phone{
+    padding: 16px !important;
+    font-size: 17px !important;
+  }
+
+  /* ===== TOP BAR SPACING ===== */
+  #topbar, #hdr{
+    padding: 14px 16px !important;
+  }
+
+  /* ===== STATUS / BADGES ===== */
+  .badge, .sbdg{
+    font-size: 12px !important;
+    padding: 6px 12px !important;
+  }
+
+  /* ===== POPUP (DRIVER) ===== */
+  #ride-popup-box{
+    padding: 22px !important;
+    border-radius: 24px 24px 0 0 !important;
+  }
+
+  /* ===== SCROLL COMFORT ===== */
+  *{
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+
+  </style>
+  
+  
+  
+  
+  
+  
+  
   <style>
     :root{
       --bg:#09090f;--surface:#111118;--card:#18181f;--border:#242430;
@@ -173,54 +286,6 @@
     /* Toast */
     #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(90px);background:var(--card);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:12px;padding:12px 20px;font-size:14px;font-weight:600;color:var(--text);z-index:9999;white-space:nowrap;transition:transform .35s cubic-bezier(.34,1.4,.64,1)}
     #toast.show{transform:translateX(-50%) translateY(0)}
-
-
-
-    @media (max-width: 600px) {
-  :root {
-    /* Slightly increase base font size for better readability */
-    font-size: 17px; 
-  }
-
-  /* 1. Make headers & titles pop more */
-  .app-n, .app-t, .logo-t h1 {
-    font-size: 20px !important;
-    letter-spacing: -0.02em;
-  }
-
-  /* 2. Bold, readable labels (previously 11px) */
-  .clabel, .flabel, .rlbl, .l {
-    font-size: 13px !important;
-    font-weight: 800 !important;
-    letter-spacing: 0.05em !important;
-    color: #a5b4fc !important; /* Slightly brighter blue-tint for visibility */
-    margin-bottom: 10px !important;
-  }
-
-  /* 3. Larger Tap Targets (Minimum 48px height for accessibility) */
-  .act-btn, .btn-go, .dis-btn, .inp, #btn-complete {
-    height: 54px !important; /* Standard "easy-tap" height */
-    font-size: 17px !important;
-    border-radius: 16px !important; /* Softer, modern look */
-  }
-
-  /* 4. Increase Card Spacing */
-  #main, .panel {
-    padding: 20px 18px !important;
-    gap: 18px !important;
-  }
-
-  .card {
-    padding: 24px 20px !important;
-    border-width: 1.5px !important; /* Slightly thicker border for "bold" feel */
-  }
-
-  /* 5. Prominent Ride Details (Driver/Customer info) */
-  .rval, .rrow, #status-text {
-    font-size: 18px !important;
-    font-weight: 700 !important;
-  }
-}
 
   </style>
 </head>

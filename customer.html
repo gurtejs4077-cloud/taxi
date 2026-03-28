@@ -276,6 +276,12 @@
 <script type="module">
   import { requireAuth, logoutUser, db } from "./auth.js";
   import {
+    initRideAppNotifications,
+    createAppNotification,
+    playAlertRing,
+    unlockAlertAudio,
+  } from "./notifications.js";
+  import {
     collection, doc, addDoc, updateDoc,
     onSnapshot, query, where, orderBy, serverTimestamp,
     Timestamp,
@@ -288,6 +294,8 @@
   const { user, name, email, phone } = await requireAuth("customer");
   const uid=user.uid;
   document.getElementById("greeting").textContent=`Hi, ${name||email}`;
+  initRideAppNotifications({ db, userId: uid, role: "customer" });
+  document.body.addEventListener("click", () => unlockAlertAudio(), { once: true, capture: true });
   document.getElementById("btn-out").addEventListener("click",async()=>{await logoutUser();window.location.href="login.html";});
 
   // Pre-fill phone if stored in profile
@@ -335,6 +343,7 @@
   }
 
   let activeRideId=null;
+  let prevRideStatus=null;
 
  // Book
 document.getElementById("btn-book").addEventListener("click", book);
@@ -473,6 +482,15 @@ async function book(){
     // ✅ SAVE TO FIREBASE (UNCHANGED LOGIC)
     await addDoc(collection(db, "ride_requests"), rideData);
 
+    try {
+      await createAppNotification(db, {
+        title: "New ride request",
+        body: "A customer booked a scheduled ride — check Requests.",
+        roles: ["admin", "superadmin"],
+        kind: "ride",
+      });
+    } catch (e) { console.warn("[Notify admins]", e.message); }
+
     // ✅ RESET INPUTS
     document.getElementById("inp-pickup").value = "";
     document.getElementById("inp-drop").value = "";
@@ -502,11 +520,19 @@ async function book(){
     query(collection(db,"ride_requests"),where("customerId","==",uid),where("status","in",["pending","dispatched","assigned","ongoing"])),
     snap=>{
       if(!snap.empty){
-        const d=snap.docs[0];activeRideId=d.id;renderActive(d.data());
+        const d=snap.docs[0];
+        const st=d.data().status;
+        if(prevRideStatus!==null && st!==prevRideStatus){
+          unlockAlertAudio();
+          playAlertRing();
+        }
+        prevRideStatus=st;
+        activeRideId=d.id;renderActive(d.data());
         document.getElementById("active-card").classList.add("show");
         document.getElementById("book-card").style.cssText="opacity:.4;pointer-events:none";
       }else{
         activeRideId=null;
+        prevRideStatus=null;
         document.getElementById("active-card").classList.remove("show");
         document.getElementById("book-card").style.cssText="";
       }

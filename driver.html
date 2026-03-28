@@ -5,8 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
   <title>Driver Panel</title>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-  \
-  
+
   
   
   <style>
@@ -383,6 +382,7 @@
 
 <script type="module">
   import { requireAuth, logoutUser, db } from "./auth.js";
+  import { initRideAppNotifications, createAppNotification } from "./notifications.js";
   import {
     collection, doc,
     setDoc, updateDoc, getDoc, getDocs, runTransaction,
@@ -517,9 +517,12 @@
   document.getElementById("btn-avail").disabled = false;
   document.getElementById("btn-busy").disabled  = false;
 
+  initRideAppNotifications({ db, userId: user.uid, role: "driver" });
+
   // Set online
   await setDoc(doc(db, "drivers", driverId), {
     status: "available", email: email||"", name: name||"", phone: phone||"",
+    fleetRole: "driver",
     lastUpdated: serverTimestamp(),
   }, merge);
   updateStatusUI("available");
@@ -566,17 +569,25 @@
     document.getElementById("status-text").textContent = st.charAt(0).toUpperCase()+st.slice(1);
   }
 
-  // ── GPS ─────────────────────────────────────────────────────
+  // ── GPS (Firestore update every 5 minutes + once on load) ──
   function startGPS() {
     if (!navigator.geolocation) return;
-    navigator.geolocation.watchPosition(
-      ({coords:{latitude:lat,longitude:lng}}) => {
-        setDoc(doc(db,"drivers",driverId),{location:{lat,lng},lastUpdated:serverTimestamp()},merge);
-        document.getElementById("gps-text").textContent=`📡 ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-      },
-      ()=>{ document.getElementById("gps-text").textContent="📡 GPS error"; },
-      {enableHighAccuracy:true,maximumAge:5000,timeout:15000}
-    );
+    const push = () => {
+      navigator.geolocation.getCurrentPosition(
+        ({ coords: { latitude: lat, longitude: lng } }) => {
+          setDoc(
+            doc(db, "drivers", driverId),
+            { location: { lat, lng }, fleetRole: "driver", lastUpdated: serverTimestamp() },
+            merge
+          );
+          document.getElementById("gps-text").textContent = `📡 ${lat.toFixed(4)}, ${lng.toFixed(4)} · next in 5m`;
+        },
+        () => { document.getElementById("gps-text").textContent = "📡 GPS error"; },
+        { enableHighAccuracy: true, maximumAge: 120000, timeout: 20000 }
+      );
+    };
+    push();
+    setInterval(push, 5 * 60 * 1000);
   }
 
   // ── Ride listeners ──────────────────────────────────────────
@@ -737,6 +748,16 @@
         await setDoc(doc(db,"drivers",driverId),{status:"busy"},merge);
         if(ride.requestId){
           try{await updateDoc(doc(db,"ride_requests",ride.requestId),{status:"ongoing",driverId,driverEmail:email||driverId});}catch(e){}
+        }
+        if (ride.customerId) {
+          try {
+            await createAppNotification(db, {
+              title: "Driver on the way",
+              body: `${ride.pickup || "Pickup"} → ${ride.drop || "Drop"}`,
+              targetUids: [ride.customerId],
+              kind: "ride",
+            });
+          } catch (e) { console.warn("[Notify customer]", e.message); }
         }
         updateStatusUI("busy");
         closePopup(rideId);

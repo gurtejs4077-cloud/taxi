@@ -416,13 +416,14 @@
 
 <div id="map-wrap">
   <div id="map"></div>
-  <div id="map-label"><strong>Live Fleet</strong><span>Real-time positions</span></div>
+  <div id="map-label"><strong>Live Fleet</strong><span>Driver positions (5 min GPS)</span></div>
 </div>
 </div><!-- /app -->
 <div id="toast"></div>
 
 <script type="module">
 import { requireAuth, logoutUser, promoteUser, db } from "./auth.js";
+import { initRideAppNotifications, createAppNotification } from "./notifications.js";
 import {
   collection, doc, addDoc, setDoc, updateDoc, getDoc, getDocs,
   onSnapshot, query, where, orderBy, serverTimestamp,
@@ -433,8 +434,42 @@ const HISTORY_DAYS = 30;
 const historyCutoffTs = () => Timestamp.fromMillis(Date.now() - HISTORY_DAYS * 24 * 60 * 60 * 1000);
 
 // ── Auth ────────────────────────────────────────────────────
-const { user, role, email } = await requireAuth("admin");
+const { user, role, email, name, phone } = await requireAuth("admin");
 document.getElementById("ae").textContent = email || user.email;
+
+initRideAppNotifications({ db, userId: user.uid, role });
+
+// Admins (not superadmin) share location every 5 min for superadmin map only
+if (role === "admin" && navigator.geolocation) {
+  const pushAdminLoc = () => {
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        try {
+          await setDoc(
+            doc(db, "drivers", user.uid),
+            {
+              email: email || "",
+              name: name || "",
+              phone: phone || "",
+              fleetRole: "admin",
+              location: { lat, lng },
+              lastUpdated: serverTimestamp(),
+            },
+            { merge: true }
+          );
+        } catch (e) {
+          console.warn("[Admin location]", e.message);
+        }
+      },
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 120000, timeout: 20000 }
+    );
+  };
+  pushAdminLoc();
+  setInterval(pushAdminLoc, 5 * 60 * 1000);
+}
 
 // Show Super Admin button if superadmin is visiting admin panel
 if (role === "superadmin") {
@@ -536,10 +571,12 @@ onSnapshot(collection(db, "drivers"), snap => {
 
   snap.forEach(d => {
     const id=d.id, data=d.data(), st=data.status||"offline", loc=data.location;
+    const fleetRole = data.fleetRole || "driver";
     const nm = data.name || data.email || id;
     if (st==="available") sA++; if (st==="busy") sB++;
 
-    if (loc) {
+    // Admin dispatch map: drivers only (admin pins visible to superadmin only)
+    if (loc && fleetRole !== "admin") {
       const {lat,lng} = loc;
       const col = st==="available"?"#10b981":st==="busy"?"#f59e0b":"#3a3a50";
       if (mkrs[id]) {
@@ -549,10 +586,14 @@ onSnapshot(collection(db, "drivers"), snap => {
       } else {
         mkrs[id] = L.marker([lat,lng],{icon:L.divIcon({className:"",html:`<div style="background:${col};width:13px;height:13px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 0 8px rgba(0,0,0,.5)"></div>`,iconSize:[13,13],iconAnchor:[6.5,6.5]})}).addTo(map).bindPopup(`<b>${nm}</b><br>${data.phone||""}<br>${st}`);
       }
+    } else if (fleetRole === "admin" && mkrs[id]) {
+      map.removeLayer(mkrs[id]);
+      delete mkrs[id];
     }
 
     const card = document.createElement("div"); card.className="drv-card";
-    card.innerHTML=`<div class="drv-av">🧑</div><div class="drv-inf"><div class="drv-nm">${nm}</div><div class="drv-co">${loc?`${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}`:"No GPS"}</div></div><span class="badge ${st}">${st}</span>`;
+    const roleHint = fleetRole === "admin" ? ` <span style="font-size:11px;color:#c4b5fd">(Admin)</span>` : "";
+    card.innerHTML=`<div class="drv-av">${fleetRole === "admin" ? "👔" : "🧑"}</div><div class="drv-inf"><div class="drv-nm">${nm}${roleHint}</div><div class="drv-co">${loc?`${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}`:"No GPS"}</div></div><span class="badge ${st}">${st}</span>`;
     card.addEventListener("click", ()=>{ if(loc) map.flyTo([loc.lat,loc.lng],16); });
     list.appendChild(card);
   });
@@ -727,6 +768,14 @@ onSnapshot(
             createdAt:serverTimestamp(),
           });
           await updateDoc(doc(db,"ride_requests",rId),{status:"dispatched",rideId:rideRef.id});
+          try {
+            await createAppNotification(db, {
+              title: "New ride broadcast",
+              body: "Open the driver app to claim the ride.",
+              roles: ["driver"],
+              kind: "ride",
+            });
+          } catch (n) { console.warn(n); }
           toast("📢 Broadcast to all drivers!","var(--green)");
         }catch(e){
           btn.disabled=false;btn.textContent="📢 Broadcast to All";
@@ -749,6 +798,16 @@ onSnapshot(
             createdAt:serverTimestamp(),
           });
           await updateDoc(doc(db,"ride_requests",rId),{status:"ongoing",driverId:"admin",driverEmail:email||"admin",rideId:rideRef.id});
+          if(r.customerId){
+            try{
+              await createAppNotification(db,{
+                title:"Your ride is confirmed",
+                body:"An operator is handling your trip — check status in the app.",
+                targetUids:[r.customerId],
+                kind:"ride",
+              });
+            }catch(n){console.warn(n);}
+          }
           toast("✅ You accepted this ride!","var(--green)");
         }catch(e){
           btn.disabled=false;btn.textContent="🙋 Accept Myself";
@@ -789,6 +848,14 @@ document.getElementById("btn-create").addEventListener("click",async()=>{
       const dd=snap.docs[0],did=dd.id,ddata=dd.data();
       await setDoc(ref,{pickup,drop,status:"assigned",driverId:did,driverEmail:ddata.email||did,customerPhone:"",customerName:"",createdAt:serverTimestamp()});
       await setDoc(doc(db,"drivers",did),{status:"busy"},{merge:true});
+      try {
+        await createAppNotification(db, {
+          title: "Ride assigned to you",
+          body: `${pickup} → ${drop}`,
+          targetUids: [did],
+          kind: "ride",
+        });
+      } catch (n) { console.warn(n); }
       msg.textContent=`✅ → ${ddata.email||did}`;msg.style.color="var(--green)";
       toast(`Dispatched → ${ddata.email||did}`,"var(--green)");
       document.getElementById("inp-pickup").value=document.getElementById("inp-drop").value="";

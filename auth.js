@@ -143,6 +143,7 @@ export async function promoteUser(targetUid, newRole, callerRole) {
       phone:       userData.phone  || "",
       status:      "offline",
       location:    null,
+      fleetRole:   newRole === "admin" ? "admin" : "driver",
       lastUpdated: new Date().toISOString(),
     }, { merge: true });
   }

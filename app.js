@@ -80,7 +80,7 @@ export async function setDriverStatus(status) {
 }
 
 /**
- * Live GPS tracking — updates Firestore location continuously.
+ * GPS — push to Firestore every 5 minutes (and once on start).
  */
 function startGPSTracking() {
   if (!navigator.geolocation) {
@@ -88,18 +88,23 @@ function startGPSTracking() {
     return;
   }
 
-  navigator.geolocation.watchPosition(
-    (pos) => {
-      const { latitude: lat, longitude: lng } = pos.coords;
-      updateDoc(doc(db, "drivers", currentDriverId), {
-        location: { lat, lng },
-        lastUpdated: serverTimestamp(),
-      });
-      console.log(`[GPS] Updated: ${lat.toFixed(5)}, ${lng.toFixed(5)}`);
-    },
-    (err) => console.error("[GPS] Error:", err.message),
-    { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
-  );
+  const push = () => {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        updateDoc(doc(db, "drivers", currentDriverId), {
+          location: { lat, lng },
+          fleetRole: "driver",
+          lastUpdated: serverTimestamp(),
+        });
+        console.log(`[GPS] Updated: ${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+      },
+      (err) => console.error("[GPS] Error:", err.message),
+      { enableHighAccuracy: true, maximumAge: 120000, timeout: 20000 }
+    );
+  };
+  push();
+  setInterval(push, 5 * 60 * 1000);
 }
 
 // ============================================================

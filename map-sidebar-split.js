@@ -1,27 +1,37 @@
 /**
- * Touch / pointer drag handle between #map-wrap and #sidebar on narrow screens.
- * Expects DOM: #sidebar, #splitter.app-splitter, #map-wrap inside column #app.
+ * Drag handles between #map-wrap and #sidebar (mobile): resize map vs bottom panel
+ * (header, stats, tabs, all tab content). Expects #splitter; optional #panel-split-grip on sidebar.
  */
 export function initMapSidebarSplit(options = {}) {
   const storageKey = options.storageKey ?? "rideapp-map-split-px";
-  const minMap = options.minMap ?? 110;
+  const minMap = options.minMap ?? 95;
   const minPanel = options.minPanel ?? 200;
-  const maxMapRatio = options.maxMapRatio ?? 0.82;
+  const maxMapRatio = options.maxMapRatio ?? 0.9;
   const getMap = options.getMap;
 
   const mq = window.matchMedia("(max-width: 768px)");
   const mapWrap = document.getElementById("map-wrap");
   const splitter = document.getElementById("splitter");
+  const panelGrip = document.getElementById("panel-split-grip");
   if (!mapWrap || !splitter) return;
 
+  const handles = panelGrip ? [splitter, panelGrip] : [splitter];
+
+  function viewportH() {
+    const vv = window.visualViewport;
+    if (vv && vv.height > 0) return vv.height;
+    return window.innerHeight;
+  }
+
+  /** Only the bar between map and sidebar (not the in-panel grip). */
   function splitterH() {
     if (!mq.matches) return 0;
     const h = splitter.getBoundingClientRect().height;
-    return h > 0 ? h : 20;
+    return h > 0 ? h : 48;
   }
 
   function clamp(px) {
-    const vh = window.innerHeight;
+    const vh = viewportH();
     const sp = splitterH();
     const maxByPanel = vh - minPanel - sp;
     const maxByRatio = vh * maxMapRatio;
@@ -55,7 +65,8 @@ export function initMapSidebarSplit(options = {}) {
   }
 
   function defaultHeight() {
-    return Math.round(Math.min(window.innerHeight * 0.42, 300));
+    const vh = viewportH();
+    return Math.round(Math.min(vh * 0.4, 300));
   }
 
   function loadInitial() {
@@ -76,16 +87,22 @@ export function initMapSidebarSplit(options = {}) {
 
   let dragY0 = null;
   let dragH0 = null;
+  let captureEl = null;
 
-  function onDown(e) {
+  function setDragging(on) {
+    document.body.classList.toggle("map-split-dragging", on);
+    handles.forEach((el) => el.classList.toggle("dragging", on));
+  }
+
+  function onDown(e, el) {
     if (!mq.matches) return;
     if (e.pointerType === "mouse" && e.button !== 0) return;
     dragY0 = e.clientY;
     dragH0 = mapWrap.getBoundingClientRect().height;
-    document.body.classList.add("map-split-dragging");
-    splitter.classList.add("dragging");
+    captureEl = el;
+    setDragging(true);
     try {
-      splitter.setPointerCapture(e.pointerId);
+      el.setPointerCapture(e.pointerId);
     } catch (_) {}
   }
 
@@ -99,11 +116,11 @@ export function initMapSidebarSplit(options = {}) {
     if (dragY0 == null) return;
     dragY0 = null;
     dragH0 = null;
-    document.body.classList.remove("map-split-dragging");
-    splitter.classList.remove("dragging");
+    setDragging(false);
     try {
-      if (e.pointerId != null) splitter.releasePointerCapture(e.pointerId);
+      if (e.pointerId != null && captureEl) captureEl.releasePointerCapture(e.pointerId);
     } catch (_) {}
+    captureEl = null;
     const cur = mapWrap.getBoundingClientRect().height;
     const h = clamp(cur);
     mapWrap.style.height = `${h}px`;
@@ -111,10 +128,12 @@ export function initMapSidebarSplit(options = {}) {
     invalidate();
   }
 
-  splitter.addEventListener("pointerdown", onDown);
-  splitter.addEventListener("pointermove", onMove);
-  splitter.addEventListener("pointerup", onEnd);
-  splitter.addEventListener("pointercancel", onEnd);
+  for (const el of handles) {
+    el.addEventListener("pointerdown", (e) => onDown(e, el));
+    el.addEventListener("pointermove", onMove);
+    el.addEventListener("pointerup", onEnd);
+    el.addEventListener("pointercancel", onEnd);
+  }
 
   function onViewportResize() {
     if (!mq.matches) return;
@@ -131,6 +150,7 @@ export function initMapSidebarSplit(options = {}) {
 
   window.addEventListener("resize", onViewportResize);
   window.visualViewport?.addEventListener?.("resize", onViewportResize);
+  window.visualViewport?.addEventListener?.("scroll", onViewportResize);
 
   loadInitial();
 }

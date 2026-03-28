@@ -167,9 +167,10 @@
     #map-label span{font-size:12px;color:var(--sub)}
 
     #splitter.app-splitter{display:none}
+    #panel-split-grip.panel-split-grip{display:none}
 
     @media(max-width:768px){
-      #app{flex-direction:column}
+      #app{flex-direction:column;height:100dvh;max-height:100dvh}
       #map-wrap{
         height:min(42vh,300px);
         min-height:110px;
@@ -181,11 +182,17 @@
       }
       #splitter.app-splitter{
         display:flex;
+        flex-direction:row;
+        flex-wrap:wrap;
+        justify-content:center;
+        align-items:center;
+        align-content:center;
+        gap:8px 12px;
         flex-shrink:0;
         order:0;
-        height:22px;
-        align-items:center;
-        justify-content:center;
+        min-height:48px;
+        padding:10px 16px;
+        height:auto;
         background:var(--surface);
         border-top:1px solid var(--border);
         border-bottom:1px solid var(--border);
@@ -195,14 +202,46 @@
         user-select:none;
         z-index:2;
       }
-      #splitter.app-splitter::after{
-        content:"";
-        width:44px;
+      #splitter .splitter-pill{
+        width:52px;
         height:5px;
         border-radius:99px;
         background:var(--muted);
+        flex-shrink:0;
       }
-      #splitter.app-splitter.dragging::after{background:var(--accent)}
+      #splitter.dragging .splitter-pill{background:var(--accent)}
+      #splitter .splitter-hint{
+        font-size:10px;
+        font-weight:700;
+        letter-spacing:.06em;
+        text-transform:uppercase;
+        color:var(--sub);
+        pointer-events:none;
+        text-align:center;
+        line-height:1.3;
+        max-width:100%;
+      }
+      #panel-split-grip.panel-split-grip{
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        flex-shrink:0;
+        min-height:36px;
+        padding:8px 16px 10px;
+        background:var(--surface);
+        border-bottom:1px solid var(--border);
+        cursor:row-resize;
+        touch-action:none;
+        -webkit-user-select:none;
+        user-select:none;
+      }
+      #panel-split-grip .panel-split-grip-pill{
+        width:48px;
+        height:4px;
+        border-radius:99px;
+        background:var(--muted);
+      }
+      #panel-split-grip.dragging .panel-split-grip-pill{background:var(--accent)}
       body.map-split-dragging{touch-action:none;-webkit-user-select:none;user-select:none}
       body.map-split-dragging #map-wrap{pointer-events:none}
       #sidebar{
@@ -213,6 +252,12 @@
         border-right:none;
         border-top:none;
         order:1;
+      }
+      #sidebar .panel.active{
+        flex:1;
+        min-height:0;
+        -webkit-overflow-scrolling:touch;
+        overscroll-behavior-y:contain;
       }
     }
 
@@ -385,6 +430,9 @@
 <body>
 <div id="app">
 <div id="sidebar">
+  <div id="panel-split-grip" class="panel-split-grip" aria-label="Drag to resize map and panel" role="separator">
+    <span class="panel-split-grip-pill" aria-hidden="true"></span>
+  </div>
 
   <!-- Header -->
   <div id="hdr">
@@ -469,7 +517,10 @@
 
 </div><!-- /sidebar -->
 
-<div id="splitter" class="app-splitter" role="separator" aria-orientation="horizontal" aria-label="Drag to resize map and panel"></div>
+<div id="splitter" class="app-splitter" role="separator" aria-orientation="horizontal" aria-label="Drag to resize map and admin panel (tabs and lists)">
+  <span class="splitter-pill" aria-hidden="true"></span>
+  <span class="splitter-hint">Map · panel — swipe to resize</span>
+</div>
 <div id="map-wrap">
   <div id="map"></div>
   <div id="map-label"><strong>Live Fleet</strong><span>Driver positions (5 min GPS)</span></div>

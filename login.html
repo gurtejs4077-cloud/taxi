@@ -6,113 +6,96 @@
   <title>RideApp — Sign In</title>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
   <style>
-    :root {
-      --bg:       #0a0a0f;
-      --surface:  #13131a;
-      --card:     #1a1a24;
-      --border:   #252535;
-      --accent:   #f59e0b;
-      --accent-d: #d97706;
-      --success:  #10b981;
-      --danger:   #f43f5e;
-      --text:     #f0f0f8;
-      --sub:      #7c7c9a;
-      --muted:    #3a3a50;
-      --r:        16px;
+    :root{
+      --bg:#09090f;--card:#18181f;--border:#242430;
+      --accent:#f59e0b;--acc-d:#d97706;
+      --green:#10b981;--red:#f43f5e;
+      --text:#f1f1f8;--sub:#6b6b85;--muted:#2a2a38;
     }
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    html,body{height:100%}
+    html,body{height:100%;-webkit-tap-highlight-color:transparent}
     body{
-      background:var(--bg); color:var(--text);
+      background:var(--bg);color:var(--text);
       font-family:'Plus Jakarta Sans',sans-serif;
-      min-height:100vh; display:flex; flex-direction:column;
-      align-items:center; justify-content:center;
-      padding:20px 16px 40px;
-      background-image:
-        radial-gradient(ellipse 60% 40% at 50% -10%, rgba(245,158,11,.12) 0%, transparent 70%),
-        radial-gradient(circle at 1px 1px, #1e1e2e 1px, transparent 0);
-      background-size: 100% 100%, 28px 28px;
+      min-height:100vh;display:flex;align-items:center;justify-content:center;
+      padding:24px 16px 40px;
+      background-image:radial-gradient(ellipse 70% 30% at 50% 0%,rgba(245,158,11,.09) 0%,transparent 65%);
     }
 
-    .wrap{width:100%;max-width:390px;animation:up .5s cubic-bezier(.34,1.4,.64,1)}
-    @keyframes up{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+    .wrap{width:100%;max-width:400px;animation:up .5s cubic-bezier(.34,1.4,.64,1)}
+    @keyframes up{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
 
     /* Brand */
-    .brand{text-align:center;margin-bottom:32px}
-    .brand-mark{
-      width:64px;height:64px;margin:0 auto 16px;
-      background:linear-gradient(135deg,var(--accent),var(--accent-d));
-      border-radius:20px;display:flex;align-items:center;justify-content:center;
-      font-size:1.8rem;box-shadow:0 12px 32px rgba(245,158,11,.35);
+    .brand{text-align:center;margin-bottom:28px}
+    .brand-icon{
+      width:62px;height:62px;margin:0 auto 14px;
+      background:linear-gradient(135deg,var(--accent),var(--acc-d));
+      border-radius:18px;display:flex;align-items:center;justify-content:center;
+      font-size:1.7rem;box-shadow:0 12px 32px rgba(245,158,11,.32);
     }
     .brand h1{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;letter-spacing:-1px;color:#fff}
     .brand p{color:var(--sub);font-size:.9rem;margin-top:5px}
 
     /* Card */
-    .card{background:var(--card);border:1px solid var(--border);border-radius:24px;padding:28px 22px;box-shadow:0 24px 64px rgba(0,0,0,.5)}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:26px 22px;box-shadow:0 24px 64px rgba(0,0,0,.5)}
 
     /* Mode tabs */
-    .tabs{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:4px;gap:4px;margin-bottom:24px}
-    .tab{flex:1;padding:10px;border:none;border-radius:9px;background:transparent;color:var(--sub);font-family:'Plus Jakarta Sans',sans-serif;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .2s}
+    .tabs{display:flex;background:#09090f;border:1px solid var(--border);border-radius:12px;padding:4px;gap:4px;margin-bottom:22px}
+    .tab{flex:1;padding:11px;border:none;border-radius:9px;background:transparent;color:var(--sub);font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all .2s}
     .tab.active{background:var(--card);color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,.4)}
 
     /* Fields */
-    .field{margin-bottom:16px}
-    .field label{display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--sub);margin-bottom:7px}
-    .inp-wrap{position:relative}
-    .inp-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:.95rem;pointer-events:none;line-height:1}
+    .field{margin-bottom:14px}
+    .field label{display:block;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--sub);margin-bottom:7px}
+    .fw{position:relative}
+    .fi{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:1rem;pointer-events:none;line-height:1}
     input{
-      width:100%;background:var(--surface);border:1.5px solid var(--border);
+      width:100%;background:#09090f;border:1.5px solid var(--border);
       border-radius:12px;color:var(--text);
-      font-family:'Plus Jakarta Sans',sans-serif;font-size:1rem;
-      padding:14px 14px 14px 42px;outline:none;
+      font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;
+      padding:14px 14px 14px 44px;outline:none;-webkit-appearance:none;
       transition:border-color .2s,box-shadow .2s;
-      -webkit-appearance:none;
     }
     input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(245,158,11,.15)}
     input::placeholder{color:var(--muted)}
-    .pw-eye{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--sub);cursor:pointer;font-size:1.1rem;padding:4px;line-height:1}
+    .pw-eye{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--sub);cursor:pointer;font-size:1.1rem;padding:4px}
 
-    /* Hidden field */
-    .hidden{display:none}
+    /* Register-only fields */
+    .reg-only{display:none}
 
     /* Submit */
-    #btn-submit{
-      width:100%;border:none;border-radius:14px;
-      background:linear-gradient(135deg,var(--accent),var(--accent-d));
+    #btn-go{
+      width:100%;border:none;border-radius:13px;
+      background:linear-gradient(135deg,var(--accent),var(--acc-d));
       color:#000;font-family:'Plus Jakarta Sans',sans-serif;
-      font-size:1rem;font-weight:700;padding:15px;
-      cursor:pointer;margin-top:6px;
-      display:flex;align-items:center;justify-content:center;gap:10px;
-      box-shadow:0 8px 24px rgba(245,158,11,.35);
-      transition:opacity .2s,transform .1s,box-shadow .2s;
+      font-size:16px;font-weight:700;padding:15px;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;gap:9px;
+      box-shadow:0 8px 24px rgba(245,158,11,.3);
+      transition:opacity .2s,transform .1s;margin-top:4px;
     }
-    #btn-submit:hover{opacity:.92;box-shadow:0 10px 28px rgba(245,158,11,.45)}
-    #btn-submit:active{transform:scale(.98)}
-    #btn-submit:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+    #btn-go:hover{opacity:.9}#btn-go:active{transform:scale(.98)}
+    #btn-go:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
 
-    .spinner{width:18px;height:18px;border:2.5px solid rgba(0,0,0,.2);border-top-color:#000;border-radius:50%;animation:spin .6s linear infinite;display:none}
+    .spin{width:18px;height:18px;border:2.5px solid rgba(0,0,0,.2);border-top-color:#000;border-radius:50%;animation:spin .6s linear infinite;display:none}
     @keyframes spin{to{transform:rotate(360deg)}}
 
     /* Messages */
-    .msg{margin-top:14px;border-radius:10px;padding:11px 14px;font-size:.84rem;display:none}
+    .msg{margin-top:14px;border-radius:11px;padding:11px 14px;font-size:14px;display:none}
     .msg.err{background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.3);color:#fda4af}
     .msg.ok {background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:#6ee7b7}
 
-    /* Divider + hint */
-    .divider{height:1px;background:var(--border);margin:22px 0}
-    .hint{text-align:center;font-size:.78rem;color:var(--sub);line-height:1.7}
+    .divider{height:1px;background:var(--border);margin:20px 0}
+    .hint{text-align:center;font-size:13px;color:var(--sub);line-height:1.7}
     .hint strong{color:var(--text)}
-    code{background:var(--muted);border-radius:5px;padding:2px 6px;font-size:.72rem}
   </style>
 </head>
 <body>
 <div class="wrap">
 
   <div class="brand">
-    <div class="brand-mark">🚕</div>
+    <div class="brand-icon">🚕</div>
     <h1>RideApp</h1>
-    <p>Book a ride, drive, or manage fleet</p>
+    <p>Book rides, drive, or manage the fleet</p>
   </div>
 
   <div class="card">
@@ -122,35 +105,35 @@
     </div>
 
     <!-- Name (register only) -->
-    <div class="field hidden" id="field-name">
-      <label>Your Name</label>
-      <div class="inp-wrap">
-        <span class="inp-icon">🧑</span>
-        <input type="text" id="inp-name" placeholder="Full name" autocomplete="name"/>
-      </div>
+    <div class="field reg-only" id="f-name">
+      <label>Full Name</label>
+      <div class="fw"><span class="fi">🧑</span><input type="text"  id="inp-name"  placeholder="Your full name" autocomplete="name"/></div>
+    </div>
+
+    <!-- Phone (register only) -->
+    <div class="field reg-only" id="f-phone">
+      <label>Phone Number</label>
+      <div class="fw"><span class="fi">📱</span><input type="tel"   id="inp-phone" placeholder="+91 98765 43210" inputmode="tel" autocomplete="tel"/></div>
     </div>
 
     <!-- Email -->
     <div class="field">
       <label>Email</label>
-      <div class="inp-wrap">
-        <span class="inp-icon">✉️</span>
-        <input type="email" id="inp-email" placeholder="you@example.com" autocomplete="email"/>
-      </div>
+      <div class="fw"><span class="fi">✉️</span><input type="email" id="inp-email" placeholder="you@example.com" autocomplete="email"/></div>
     </div>
 
     <!-- Password -->
     <div class="field">
       <label>Password</label>
-      <div class="inp-wrap">
-        <span class="inp-icon">🔒</span>
+      <div class="fw">
+        <span class="fi">🔒</span>
         <input type="password" id="inp-pw" placeholder="••••••••" autocomplete="current-password"/>
-        <button class="pw-eye" id="pw-toggle" type="button">👁</button>
+        <button class="pw-eye" id="pw-eye" type="button">👁</button>
       </div>
     </div>
 
-    <button id="btn-submit">
-      <div class="spinner" id="spinner"></div>
+    <button id="btn-go">
+      <div class="spin" id="spin"></div>
       <span id="btn-label">Sign In</span>
     </button>
 
@@ -159,8 +142,8 @@
 
     <div class="divider"></div>
     <div class="hint">
-      New accounts default to <strong>Customer</strong> role.<br/>
-      Drivers & Admins are set in Firestore <code>users</code> collection.
+      All new accounts start as <strong>Customer</strong>.<br/>
+      Admin or Superadmin can upgrade your role.
     </div>
   </div>
 </div>
@@ -172,59 +155,55 @@
 
   let mode = "login";
 
-  const tabLogin    = document.getElementById("tab-login");
-  const tabRegister = document.getElementById("tab-register");
-  const fieldName   = document.getElementById("field-name");
-  const btnSubmit   = document.getElementById("btn-submit");
-  const btnLabel    = document.getElementById("btn-label");
-  const spinner     = document.getElementById("spinner");
-  const msgErr      = document.getElementById("msg-err");
-  const msgOk       = document.getElementById("msg-ok");
-
   // Auto-redirect if already signed in
-  onAuthStateChanged(auth, async (user) => {
+  onAuthStateChanged(auth, async user => {
     if (!user) return;
     try {
       const snap = await getDoc(doc(db, "users", user.uid));
       if (snap.exists()) redirectByRole(snap.data().role);
-    } catch(e) {}
+    } catch(e){}
   });
 
   // Tab switching
-  tabLogin.addEventListener("click",    () => switchMode("login"));
-  tabRegister.addEventListener("click", () => switchMode("register"));
+  document.getElementById("tab-login").addEventListener("click",    () => setMode("login"));
+  document.getElementById("tab-register").addEventListener("click", () => setMode("register"));
 
-  function switchMode(m) {
+  function setMode(m) {
     mode = m;
-    tabLogin.classList.toggle("active",    m === "login");
-    tabRegister.classList.toggle("active", m === "register");
-    fieldName.classList.toggle("hidden",   m === "login");
-    btnLabel.textContent = m === "login" ? "Sign In" : "Create Account";
+    document.getElementById("tab-login").classList.toggle("active",    m==="login");
+    document.getElementById("tab-register").classList.toggle("active", m==="register");
+    document.querySelectorAll(".reg-only").forEach(el => el.style.display = m==="register" ? "block" : "none");
+    document.getElementById("btn-label").textContent = m==="login" ? "Sign In" : "Create Account";
     clear();
   }
 
   // Submit
-  btnSubmit.addEventListener("click", go);
-  ["inp-name","inp-email","inp-pw"].forEach(id =>
-    document.getElementById(id)?.addEventListener("keydown", e => { if (e.key==="Enter") go(); })
+  document.getElementById("btn-go").addEventListener("click", go);
+  ["inp-name","inp-phone","inp-email","inp-pw"].forEach(id =>
+    document.getElementById(id)?.addEventListener("keydown", e => { if(e.key==="Enter") go(); })
   );
 
   async function go() {
     const email = document.getElementById("inp-email").value.trim();
     const pw    = document.getElementById("inp-pw").value;
     const name  = document.getElementById("inp-name").value.trim();
+    const phone = document.getElementById("inp-phone").value.trim();
     clear();
-    if (!email || !pw)        { showErr("Enter your email and password."); return; }
+
+    if (!email || !pw)          { showErr("Enter email and password."); return; }
+    if (mode==="register" && !name)  { showErr("Enter your full name."); return; }
+    if (mode==="register" && !phone) { showErr("Enter your phone number."); return; }
     if (mode==="register" && pw.length < 6) { showErr("Password needs at least 6 characters."); return; }
+
     loading(true);
     try {
-      if (mode === "login") {
+      if (mode==="login") {
         const { role } = await loginUser(email, pw);
         redirectByRole(role);
       } else {
-        const { role } = await registerUser(email, pw, "customer", name);
+        await registerUser(email, pw, name, phone);
         showOk("Account created! Redirecting…");
-        setTimeout(() => redirectByRole(role), 1200);
+        setTimeout(() => redirectByRole("customer"), 1200);
       }
     } catch(err) {
       showErr(friendly(err.code || err.message));
@@ -233,13 +212,15 @@
   }
 
   function loading(on) {
-    btnSubmit.disabled    = on;
-    spinner.style.display = on ? "block" : "none";
-    btnLabel.textContent  = on ? (mode==="login" ? "Signing in…" : "Creating…") : (mode==="login" ? "Sign In" : "Create Account");
+    document.getElementById("btn-go").disabled   = on;
+    document.getElementById("spin").style.display = on ? "block" : "none";
+    document.getElementById("btn-label").textContent = on
+      ? (mode==="login" ? "Signing in…" : "Creating…")
+      : (mode==="login" ? "Sign In"     : "Create Account");
   }
-  function showErr(m) { msgErr.textContent="⚠️ "+m; msgErr.style.display="block"; }
-  function showOk(m)  { msgOk.textContent ="✅ "+m; msgOk.style.display ="block"; }
-  function clear()    { msgErr.style.display=msgOk.style.display="none"; }
+  function showErr(m){ const el=document.getElementById("msg-err"); el.textContent="⚠️ "+m; el.style.display="block"; }
+  function showOk(m) { const el=document.getElementById("msg-ok");  el.textContent="✅ "+m; el.style.display="block"; }
+  function clear()   { document.getElementById("msg-err").style.display=document.getElementById("msg-ok").style.display="none"; }
 
   function friendly(c) {
     return ({
@@ -253,9 +234,9 @@
     })[c] || "Something went wrong. Try again.";
   }
 
-  document.getElementById("pw-toggle").addEventListener("click", () => {
+  document.getElementById("pw-eye").addEventListener("click", () => {
     const i = document.getElementById("inp-pw");
-    i.type = i.type === "password" ? "text" : "password";
+    i.type = i.type==="password" ? "text" : "password";
   });
 </script>
 </body>

@@ -779,9 +779,13 @@
      FIREBASE + APP LOGIC
 ═══════════════════════════════════════════════ -->
 <script type="module">
-import { requireAuth, logoutUser, promoteUser, db } from "./auth.js";
+import { requireAuth, logoutUser, promoteUser, db, app } from "./auth.js";
 import { initMapSidebarSplit } from "./map-sidebar-split.js";
 import { initRideAppNotifications, createAppNotification } from "./notifications.js";
+import {
+  pendingVisibleToSuperadmin,
+  REQUEST_STAGE_ADMIN,
+} from "./ride-request-stages.js";
 import {
   collection, doc,
   addDoc, setDoc, updateDoc, getDoc, getDocs,
@@ -795,7 +799,7 @@ const historyCutoffTs = () => Timestamp.fromMillis(Date.now() - HISTORY_DAYS * 2
 // ── Auth ────────────────────────────────────────────────────
 const { user, role, email } = await requireAuth("superadmin");
 document.getElementById("sa-email").textContent = email;
-initRideAppNotifications({ db, userId: user.uid, role: "superadmin" });
+initRideAppNotifications({ db, app, userId: user.uid, role: "superadmin" });
 document.getElementById("btn-out").addEventListener("click", async () => {
   await logoutUser(); window.location.href = "login.html";
 });
@@ -1184,13 +1188,14 @@ console.log("[SuperAdmin] Starting ride_requests listener…");
 onSnapshot(
   query(collection(db, "ride_requests"), where("status", "==", "pending"), orderBy("createdAt", "asc")),
   snap => {
-    sQ = snap.size; upStats();
-    document.getElementById("ndot").style.display = snap.size > 0 ? "block" : "none";
+    const docsAll = [...snap.docs].filter((d) => pendingVisibleToSuperadmin(d.data()));
+    sQ = docsAll.length; upStats();
+    document.getElementById("ndot").style.display = docsAll.length > 0 ? "block" : "none";
     const list = document.getElementById("req-list"); list.innerHTML = "";
-    if (snap.empty) { list.innerHTML = '<div class="empty">No pending requests.</div>'; return; }
+    if (!docsAll.length) { list.innerHTML = '<div class="empty">No pending requests in your queue.</div>'; return; }
 
     // Sort: scheduled first (by time), then immediate
-    const docs = [...snap.docs].sort((a, b) => {
+    const docs = docsAll.sort((a, b) => {
       const ra = a.data(), rb = b.data();
       if (ra.isScheduled && rb.isScheduled) return new Date(ra.scheduledAt||0) - new Date(rb.scheduledAt||0);
       if (ra.isScheduled) return -1; if (rb.isScheduled) return 1; return 0;
@@ -1222,37 +1227,28 @@ onSnapshot(
           <span>📍 ${r.pickup||"—"}</span><span class="arr">→</span><span>🏁 ${r.drop||"—"}</span>
         </div>
         <div class="req-actions">
-          <button class="btn-bc">📢 Broadcast to All</button>
+          <button class="btn-to-admins">📣 Send to admins</button>
           <button class="btn-self">🙋 Accept Myself</button>
           <button class="btn-rej">✕ Reject</button>
         </div>`;
 
-      // Broadcast to all drivers
-      card.querySelector(".btn-bc").addEventListener("click", async () => {
-        const btn = card.querySelector(".btn-bc");
-        btn.disabled = true; btn.textContent = "Broadcasting…";
+      // Forward to admins (admins can then broadcast to drivers)
+      card.querySelector(".btn-to-admins").addEventListener("click", async () => {
+        const btn = card.querySelector(".btn-to-admins");
+        btn.disabled = true; btn.textContent = "Sending…";
         try {
-          const rideRef = await addDoc(collection(db, "rides"), {
-            pickup: r.pickup, drop: r.drop,
-            status: "broadcast", driverId: null, driverEmail: null,
-            requestId: rId, customerId: r.customerId || null,
-            customerName: r.customerName || "", customerPhone: r.customerPhone || "",
-            isScheduled: r.isScheduled || false, scheduledAt: r.scheduledAt || null,
-            ...rideAirportFields(r),
-            createdAt: serverTimestamp(),
-          });
-          await updateDoc(doc(db, "ride_requests", rId), { status: "dispatched", rideId: rideRef.id });
+          await updateDoc(doc(db, "ride_requests", rId), { requestStage: REQUEST_STAGE_ADMIN });
           try {
             await createAppNotification(db, {
-              title: "New ride broadcast",
-              body: "Open the driver app to claim the ride.",
-              roles: ["driver"],
+              title: "New ride request (from Super Admin)",
+              body: `${r.pickup || "Pickup"} → ${r.drop || "Drop"} — open Admin panel to broadcast to drivers.`,
+              roles: ["admin"],
               kind: "ride",
             });
           } catch (n) { console.warn(n); }
-          toast("📢 Broadcast to all drivers!", "var(--green)");
+          toast("📣 Sent to admins", "var(--green)");
         } catch(err) {
-          btn.disabled = false; btn.textContent = "📢 Broadcast to All";
+          btn.disabled = false; btn.textContent = "📣 Send to admins";
           toast("❌ " + err.message, "var(--red)");
         }
       });

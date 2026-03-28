@@ -274,7 +274,8 @@
 <div id="toast"></div>
 
 <script type="module">
-  import { requireAuth, logoutUser, db } from "./auth.js";
+  import { requireAuth, logoutUser, db, app } from "./auth.js";
+  import { REQUEST_STAGE_SUPERADMIN, REQUEST_STAGE_ADMIN } from "./ride-request-stages.js";
   import {
     initRideAppNotifications,
     createAppNotification,
@@ -294,7 +295,7 @@
   const { user, name, email, phone } = await requireAuth("customer");
   const uid=user.uid;
   document.getElementById("greeting").textContent=`Hi, ${name||email}`;
-  initRideAppNotifications({ db, userId: uid, role: "customer" });
+  initRideAppNotifications({ db, app, userId: uid, role: "customer" });
   document.body.addEventListener("click", () => unlockAlertAudio(), { once: true, capture: true });
   document.getElementById("btn-out").addEventListener("click",async()=>{await logoutUser();window.location.href="login.html";});
 
@@ -467,6 +468,7 @@ async function book(){
 
     status: "pending",
     driverId: null,
+    requestStage: REQUEST_STAGE_SUPERADMIN,
 
     createdAt: serverTimestamp()
   };
@@ -485,8 +487,8 @@ async function book(){
     try {
       await createAppNotification(db, {
         title: "New ride request",
-        body: "A customer booked a scheduled ride — check Requests.",
-        roles: ["admin", "superadmin"],
+        body: "A customer booked a ride — review in Super Admin first.",
+        roles: ["superadmin"],
         kind: "ride",
       });
     } catch (e) { console.warn("[Notify admins]", e.message); }
@@ -554,8 +556,13 @@ async function book(){
     }else{
       ab.style.display = "none";
     }
+    let pendingTit="Request received", pendingSub="Super Admin is reviewing your request.";
+    if(r.status==="pending"&&r.requestStage===REQUEST_STAGE_ADMIN){
+      pendingTit="Finding a driver…";
+      pendingSub="Dispatch will broadcast your ride to drivers.";
+    }
     const m={
-      pending:   {step:0,ico:"⏳",tit:"Finding a driver…",     sub:"Admin is reviewing your request",bdg:"sb-pending"},
+      pending:   {step:0,ico:"⏳",tit:pendingTit,sub:pendingSub,bdg:"sb-pending"},
       dispatched:{step:1,ico:"📢",tit:"Broadcast to drivers",   sub:"Waiting for driver to accept",   bdg:"sb-pending"},
       assigned:  {step:1,ico:"👤",tit:"Driver is coming",       sub:"Your driver accepted the ride",  bdg:"sb-assigned"},
       ongoing:   {step:2,ico:"🚗",tit:"Ride in progress",       sub:"Enjoy your ride!",               bdg:"sb-ongoing"},

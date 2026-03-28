@@ -17,6 +17,8 @@ import {
   serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+import { tryEnableWebPush } from "./push-notifications.js";
+
 export const NOTIF_COLLECTION = "app_notifications";
 
 /** Reserved for future strict autoplay unlock; audio is attempted in playAlertRing. */
@@ -215,8 +217,14 @@ function mergeById(mapA, mapB) {
 /**
  * Bell + panel + Firestore listeners (role + personal). Plays sound / ring on new items.
  */
-export function initRideAppNotifications({ db, userId, role }) {
+export function initRideAppNotifications({ db, userId, role, app = null }) {
   installNotificationStyles();
+
+  if (app && userId) {
+    tryEnableWebPush({ app, db, userId }).catch((e) =>
+      console.warn("[Push] setup failed:", e?.message || e)
+    );
+  }
 
   const bell = document.createElement("button");
   bell.type = "button";

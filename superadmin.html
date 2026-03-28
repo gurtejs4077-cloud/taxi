@@ -111,6 +111,25 @@
   }
 }
 
+@media (max-width: 768px){
+
+  /* Make map take HALF screen */
+  #map-wrap{
+    height: 50vh !important;
+    min-height: 300px; /* safety for small phones */
+  }
+
+  /* Make sidebar take remaining space */
+  #sidebar{
+    height: 50vh !important;
+    overflow-y: auto;
+  }
+
+  /* Smooth scroll feel */
+  #sidebar, #map-wrap{
+    -webkit-overflow-scrolling: touch;
+  }
+}
 
 
   </style>

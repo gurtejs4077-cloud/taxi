@@ -56,12 +56,7 @@
     .linp:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--glow)}
     .linp::placeholder{color:var(--muted)}
 
-    /* Schedule toggle */
-    .stoggle{display:flex;background:var(--surf);border:1px solid var(--border);border-radius:13px;padding:4px;gap:4px;margin-bottom:14px}
-    .stab{flex:1;padding:12px;border:none;border-radius:10px;background:transparent;color:var(--sub);font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all .2s}
-    .stab.active{background:var(--card);color:var(--text);box-shadow:0 2px 10px rgba(0,0,0,.4)}
-    .dtrow{display:none;gap:10px;margin-bottom:14px}
-    .dtrow.show{display:flex}
+    .dtrow{display:flex;gap:10px;margin-bottom:14px}
     .dtrow .fw{flex:1}
 
     /* Book button */
@@ -122,6 +117,12 @@
     .hs-rejected {background:rgba(244,63,94,.12);color:#fb7185}
     .hs-cancelled{background:rgba(107,107,133,.12);color:var(--sub)}
 
+    .hist-hint{font-size:12px;color:var(--sub);margin:-6px 0 14px}
+
+    .buffer-lbl{display:flex;align-items:flex-start;gap:11px;cursor:pointer;font-size:14px;font-weight:600;color:var(--text);line-height:1.45}
+    .buffer-lbl input{width:18px;height:18px;margin-top:2px;accent-color:var(--accent);flex-shrink:0}
+    .buffer-hint{font-size:12px;color:var(--sub);margin-top:8px;line-height:1.45;padding-left:29px}
+
     /* Toast */
     #toast{position:fixed;bottom:calc(20px + var(--sb));left:50%;transform:translateX(-50%) translateY(90px);background:var(--card);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:13px;padding:13px 22px;font-size:14px;font-weight:600;color:var(--text);z-index:999;white-space:nowrap;transition:transform .35s cubic-bezier(.34,1.4,.64,1)}
     #toast.show{transform:translateX(-50%) translateY(0)}
@@ -144,13 +145,70 @@
 <div id="main">
 
   <!-- Book -->
+
+
+  <div class="field">
+  <label class="flabel">Ride Type</label>
+  <select id="rideType" class="inp">
+    <option value="normal">Normal Ride</option>
+    <option value="airport">Airport Ride ✈️</option>
+  </select>
+</div>
+
+
+
   <div class="card" id="book-card">
     <div class="clabel">Book a Ride</div>
 
-    <div class="loc-stack">
+    <div class="loc-stack" id="normal-loc-stack">
       <div class="loc-row"><div class="ldot"></div><input class="linp" type="text" id="inp-pickup" placeholder="Pickup location"/></div>
       <div style="display:flex;padding:0 5px"><div class="lline"></div></div>
       <div class="loc-row"><div class="ldot d"></div><input class="linp" type="text" id="inp-drop" placeholder="Drop / destination"/></div>
+    </div>
+
+    <div id="airport-fields" style="display:none">
+      <div class="field">
+        <label class="flabel">Airport</label>
+        <select id="airportSelect" class="inp" style="padding-left:14px">
+          <option value="">Select airport…</option>
+          <option value="Delhi IGI Airport">Delhi IGI</option>
+          <option value="Chandigarh Airport">Chandigarh Airport</option>
+          <option value="Amritsar Airport">Amritsar Airport</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="flabel">Arrival / Departure</label>
+        <select id="tripType" class="inp">
+          <option value="arrival">Arrival (Airport → City)</option>
+          <option value="departure">Departure (City → Airport)</option>
+        </select>
+      </div>
+      <div class="field" id="airport-city-block">
+        <label class="flabel" id="airport-city-label">City address</label>
+        <input class="inp" id="inp-airport-city" type="text" placeholder="" autocomplete="street-address"/>
+      </div>
+      <div class="field">
+        <label class="flabel">Flight Number</label>
+        <input class="inp" id="flightNo" placeholder="e.g. AI-202" autocomplete="off"/>
+      </div>
+      <div class="field">
+        <label class="flabel">Passengers</label>
+        <input type="number" class="inp" id="passengers" placeholder="Number of passengers" min="1" step="1" inputmode="numeric"/>
+      </div>
+      <div class="field">
+        <label class="flabel">Journey Type</label>
+        <select id="journeyType" class="inp">
+          <option value="oneway">One-way</option>
+          <option value="round">Two-way</option>
+        </select>
+      </div>
+      <div class="field" id="flight-delay-buffer-row" style="display:none">
+        <label class="buffer-lbl">
+          <input type="checkbox" id="chk-flight-buffer"/>
+          <span>Add +30 min buffer for flight delays</span>
+        </label>
+        <div class="buffer-hint">Your pickup time moves 30 minutes later on the schedule (helps if the flight is delayed).</div>
+      </div>
     </div>
 
     <div class="field">
@@ -158,11 +216,9 @@
       <div class="fw"><span class="fi">📱</span><input class="inp" type="tel" id="inp-phone" placeholder="+91 98765 43210" inputmode="tel" autocomplete="tel"/></div>
     </div>
 
-    <div class="stoggle">
-      <button class="stab active" id="tab-now"   type="button">⚡ Ride Now</button>
-      <button class="stab"        id="tab-sched" type="button">📅 Schedule</button>
+    <div class="field">
+      <label class="flabel">📅 Pickup date &amp; time</label>
     </div>
-
     <div class="dtrow" id="dtrow">
       <div class="fw"><span class="fi">📅</span><input class="inp" type="date" id="inp-date" style="padding-left:44px"/></div>
       <div class="fw"><span class="fi">🕐</span><input class="inp" type="time" id="inp-time" style="padding-left:44px"/></div>
@@ -170,10 +226,16 @@
 
     <button id="btn-book">
       <div class="spin" id="bspin"></div>
-      <span id="blbl">🚕 Request Ride</span>
+      <span id="blbl">📅 Book scheduled ride</span>
     </button>
     <div id="bk-msg"></div>
   </div>
+
+
+
+
+
+
 
   <!-- Active ride -->
   <div class="card" id="active-card">
@@ -186,6 +248,13 @@
     </div>
     <div class="s-strip"><div class="sico" id="sico">⏳</div><div class="sinf"><div class="stit" id="stit">Finding a driver…</div><div class="ssub" id="ssub">Your request is with the admin</div></div><div class="sbdg sb-pending" id="sbdg">Pending</div></div>
     <div class="sched-banner" id="sched-banner" style="display:none"><div class="ico">📅</div><div><div class="sdt" id="sched-dt">Scheduled ride</div><div class="ssb">Driver will be reminded 30 min before</div></div></div>
+    <div class="rbox" id="airport-active-box" style="display:none">
+      <div class="rrow"><div class="rico">✈️</div><div><div class="rlbl">Airport ride</div><div class="rval" id="a-airport-meta">—</div></div></div>
+      <div class="rsep"></div>
+      <div class="rrow"><div class="rico">🎫</div><div><div class="rlbl">Flight</div><div class="rval" id="a-flight">—</div></div></div>
+      <div class="rsep"></div>
+      <div class="rrow"><div class="rico">👥</div><div><div class="rlbl">Passengers</div><div class="rval" id="a-pax">—</div></div></div>
+    </div>
     <div class="rbox">
       <div class="rrow"><div class="rico">📍</div><div><div class="rlbl">Pickup</div><div class="rval" id="a-pickup">—</div></div></div>
       <div class="rsep"></div>
@@ -197,6 +266,7 @@
   <!-- History -->
   <div class="card">
     <div class="clabel">Past Rides <span id="hcnt" style="color:var(--sub)"></span></div>
+    <div class="hist-hint">Showing the last 30 days</div>
     <div id="hlist"><div class="hem">No rides yet.</div></div>
   </div>
 
@@ -208,7 +278,12 @@
   import {
     collection, doc, addDoc, updateDoc,
     onSnapshot, query, where, orderBy, serverTimestamp,
+    Timestamp,
   } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  /** History lists only show the last ~30 days (rolling window). */
+  const HISTORY_DAYS = 30;
+  const historyCutoffTs = () => Timestamp.fromMillis(Date.now() - HISTORY_DAYS * 24 * 60 * 60 * 1000);
 
   const { user, name, email, phone } = await requireAuth("customer");
   const uid=user.uid;
@@ -223,73 +298,204 @@
     el.classList.add("show");setTimeout(()=>el.classList.remove("show"),3400);
   }
 
-  // Schedule toggle
-  let isSched=false;
   const pad=n=>String(n).padStart(2,"0");
   const d30=new Date(Date.now()+30*60000);
   document.getElementById("inp-date").min=new Date().toISOString().split("T")[0];
   document.getElementById("inp-date").value=new Date().toISOString().split("T")[0];
   document.getElementById("inp-time").value=`${pad(d30.getHours())}:${pad(d30.getMinutes())}`;
 
-  document.getElementById("tab-now").addEventListener("click",()=>{
-    isSched=false;
-    document.getElementById("tab-now").classList.add("active");
-    document.getElementById("tab-sched").classList.remove("active");
-    document.getElementById("dtrow").classList.remove("show");
-    document.getElementById("blbl").textContent="🚕 Request Ride";
-  });
-  document.getElementById("tab-sched").addEventListener("click",()=>{
-    isSched=true;
-    document.getElementById("tab-sched").classList.add("active");
-    document.getElementById("tab-now").classList.remove("active");
-    document.getElementById("dtrow").classList.add("show");
-    document.getElementById("blbl").textContent="📅 Schedule Ride";
-  });
+  function syncAirportCityLabel(){
+    const t=document.getElementById("tripType")?.value||"arrival";
+    const lab=document.getElementById("airport-city-label");
+    const inp=document.getElementById("inp-airport-city");
+    if(!lab||!inp)return;
+    if(t==="arrival"){
+      lab.textContent="Drop-off in city";
+      inp.placeholder="Where to go after the airport (hotel, area, address)";
+    }else{
+      lab.textContent="Pickup in city";
+      inp.placeholder="Where to pick you up (address, area, hotel)";
+    }
+  }
+
+  function rideLocationModeUI(){
+    const isAir=document.getElementById("rideType").value==="airport";
+    document.getElementById("normal-loc-stack").style.display=isAir?"none":"block";
+    document.getElementById("airport-fields").style.display=isAir?"block":"none";
+    if(isAir)syncAirportCityLabel();
+    updateDelayBufferRow();
+  }
+
+  function updateDelayBufferRow(){
+    const row=document.getElementById("flight-delay-buffer-row");
+    if(!row)return;
+    const show=document.getElementById("rideType").value==="airport";
+    row.style.display=show?"block":"none";
+    if(!show)document.getElementById("chk-flight-buffer").checked=false;
+  }
 
   let activeRideId=null;
 
-  // Book
-  document.getElementById("btn-book").addEventListener("click",book);
-  ["inp-pickup","inp-drop","inp-phone"].forEach(id=>
-    document.getElementById(id).addEventListener("keydown",e=>{if(e.key==="Enter")book();})
-  );
+ // Book
+document.getElementById("btn-book").addEventListener("click", book);
 
-  async function book(){
-    const pickup=document.getElementById("inp-pickup").value.trim();
-    const drop=document.getElementById("inp-drop").value.trim();
-    const ph=document.getElementById("inp-phone").value.trim();
-    const msg=document.getElementById("bk-msg");
-    msg.textContent="";msg.style.color="var(--sub)";
+async function book(){
 
-    if(!pickup||!drop){msg.textContent="⚠️ Enter pickup and destination.";msg.style.color="var(--red)";return;}
-    if(!ph){msg.textContent="⚠️ Enter your phone number.";msg.style.color="var(--red)";return;}
-    if(activeRideId){msg.textContent="⚠️ You already have an active ride.";msg.style.color="var(--red)";return;}
+  const ph     = document.getElementById("inp-phone").value.trim();
+  const rideTypeVal = document.getElementById("rideType")?.value || "normal";
 
-    let schedAt=null;
-    if(isSched){
-      const dv=document.getElementById("inp-date").value,tv=document.getElementById("inp-time").value;
-      if(!dv||!tv){msg.textContent="⚠️ Pick date and time.";msg.style.color="var(--red)";return;}
-      schedAt=new Date(`${dv}T${tv}`);
-      if(schedAt<new Date(Date.now()+25*60000)){msg.textContent="⚠️ Schedule at least 30 min ahead.";msg.style.color="var(--red)";return;}
+  const msg = document.getElementById("bk-msg");
+  msg.textContent = "";
+  msg.style.color = "var(--sub)";
+
+  let pickup = "";
+  let drop = "";
+
+  if(rideTypeVal === "normal"){
+    pickup = document.getElementById("inp-pickup").value.trim();
+    drop   = document.getElementById("inp-drop").value.trim();
+    if(!pickup || !drop){
+      msg.textContent = "⚠️ Enter pickup and destination.";
+      msg.style.color = "var(--red)";
+      return;
     }
-
-    const btn=document.getElementById("btn-book"),spin=document.getElementById("bspin");
-    btn.disabled=true;spin.style.display="block";
-    try{
-      await addDoc(collection(db,"ride_requests"),{
-        customerId:uid,customerName:name||email,customerEmail:email,customerPhone:ph,
-        pickup,drop,status:"pending",isScheduled:isSched,
-        scheduledAt:schedAt?schedAt.toISOString():null,driverId:null,
-        createdAt:serverTimestamp(),
-      });
-      document.getElementById("inp-pickup").value=document.getElementById("inp-drop").value="";
-      toast(isSched?`📅 Scheduled for ${schedAt.toLocaleString([],{dateStyle:"medium",timeStyle:"short"})}!`:"🚕 Ride requested!","var(--green)");
-    }catch(e){
-      msg.textContent="❌ Failed. Try again.";msg.style.color="var(--red)";
-      console.error("[Book]",e);
+  } else {
+    const ap = document.getElementById("airportSelect")?.value.trim() || "";
+    const city = document.getElementById("inp-airport-city")?.value.trim() || "";
+    const tt = document.getElementById("tripType")?.value || "arrival";
+    const fn = document.getElementById("flightNo")?.value.trim() || "";
+    const px = document.getElementById("passengers")?.value.trim() || "";
+    if(!ap){
+      msg.textContent = "⚠️ Select an airport.";
+      msg.style.color = "var(--red)";
+      return;
     }
-    btn.disabled=false;spin.style.display="none";
+    if(!city){
+      msg.textContent = tt === "arrival"
+        ? "⚠️ Enter where to go in the city after the airport."
+        : "⚠️ Enter where to pick you up in the city.";
+      msg.style.color = "var(--red)";
+      return;
+    }
+    if(!fn){
+      msg.textContent = "⚠️ Enter your flight number.";
+      msg.style.color = "var(--red)";
+      return;
+    }
+    if(!px || Number(px) < 1){
+      msg.textContent = "⚠️ Enter the number of passengers (at least 1).";
+      msg.style.color = "var(--red)";
+      return;
+    }
+    if(tt === "arrival"){
+      pickup = ap;
+      drop = city;
+    } else {
+      pickup = city;
+      drop = ap;
+    }
   }
+
+  if(!ph){
+    msg.textContent = "⚠️ Enter your phone number.";
+    msg.style.color = "var(--red)";
+    return;
+  }
+
+  if(activeRideId){
+    msg.textContent = "⚠️ You already have an active ride.";
+    msg.style.color = "var(--red)";
+    return;
+  }
+
+  let delayBufferMinutes = 0;
+
+  const dv = document.getElementById("inp-date").value;
+  const tv = document.getElementById("inp-time").value;
+
+  if(!dv || !tv){
+    msg.textContent = "⚠️ Pick date and time for your ride.";
+    msg.style.color = "var(--red)";
+    return;
+  }
+
+  let schedAt = new Date(`${dv}T${tv}`);
+
+  if(rideTypeVal === "airport" && document.getElementById("chk-flight-buffer")?.checked){
+    delayBufferMinutes = 30;
+    schedAt = new Date(schedAt.getTime() + 30 * 60000);
+  }
+
+  if(schedAt < new Date(Date.now() + 25 * 60000)){
+    msg.textContent = "⚠️ Schedule at least 30 min ahead.";
+    msg.style.color = "var(--red)";
+    return;
+  }
+
+  // ✅ AIRPORT + NORMAL RIDE DATA (MAIN PART)
+  const rideData = {
+    type: rideTypeVal,
+
+    customerId: uid,
+    customerName: name || email,
+    customerEmail: email,
+    customerPhone: ph,
+
+    pickup: pickup,
+    drop: drop,
+
+    // ✈️ AIRPORT FIELDS (only for airport rides)
+    airportName: rideTypeVal === "airport" ? (document.getElementById("airportSelect")?.value || "").trim() : "",
+    tripType: rideTypeVal === "airport" ? (document.getElementById("tripType")?.value || "") : "",
+    flightNo: rideTypeVal === "airport" ? (document.getElementById("flightNo")?.value || "").trim() : "",
+    passengers: rideTypeVal === "airport" ? (document.getElementById("passengers")?.value || "").trim() : "",
+    journeyType: rideTypeVal === "airport" ? (document.getElementById("journeyType")?.value || "") : "",
+    delayBufferMinutes: rideTypeVal === "airport" ? delayBufferMinutes : 0,
+
+    // ⏰ TIME (scheduled only)
+    isScheduled: true,
+    scheduledAt: schedAt.toISOString(),
+
+    status: "pending",
+    driverId: null,
+
+    createdAt: serverTimestamp()
+  };
+
+  // ✅ UI LOADING
+  const btn = document.getElementById("btn-book");
+  const spin = document.getElementById("bspin");
+
+  btn.disabled = true;
+  spin.style.display = "block";
+
+  try{
+    // ✅ SAVE TO FIREBASE (UNCHANGED LOGIC)
+    await addDoc(collection(db, "ride_requests"), rideData);
+
+    // ✅ RESET INPUTS
+    document.getElementById("inp-pickup").value = "";
+    document.getElementById("inp-drop").value = "";
+    document.getElementById("inp-airport-city").value = "";
+    document.getElementById("airportSelect").selectedIndex = 0;
+    document.getElementById("flightNo").value = "";
+    document.getElementById("passengers").value = "";
+    document.getElementById("chk-flight-buffer").checked = false;
+
+    toast(
+      `📅 Scheduled for ${schedAt.toLocaleString([], {dateStyle:"medium", timeStyle:"short"})}!`,
+      "var(--green)"
+    );
+
+  } catch(e){
+    msg.textContent = "❌ Failed. Try again.";
+    msg.style.color = "var(--red)";
+    console.error("[Book]", e);
+  }
+
+  btn.disabled = false;
+  spin.style.display = "none";
+}
 
   // Active ride listener
   onSnapshot(
@@ -310,6 +516,18 @@
   function renderActive(r){
     document.getElementById("a-pickup").textContent=r.pickup||"—";
     document.getElementById("a-drop").textContent=r.drop||"—";
+    const isAirport = r.type === "airport";
+    const ab = document.getElementById("airport-active-box");
+    if(isAirport){
+      ab.style.display = "block";
+      const tripL = { arrival: "Arrival", departure: "Departure" }[r.tripType] || r.tripType || "—";
+      const jL = { oneway: "One-way", round: "Two-way" }[r.journeyType] || r.journeyType || "—";
+      document.getElementById("a-airport-meta").textContent = `${r.airportName || "—"} · ${tripL} · ${jL}`;
+      document.getElementById("a-flight").textContent = r.flightNo || "—";
+      document.getElementById("a-pax").textContent = r.passengers != null && r.passengers !== "" ? String(r.passengers) : "—";
+    }else{
+      ab.style.display = "none";
+    }
     const m={
       pending:   {step:0,ico:"⏳",tit:"Finding a driver…",     sub:"Admin is reviewing your request",bdg:"sb-pending"},
       dispatched:{step:1,ico:"📢",tit:"Broadcast to drivers",   sub:"Waiting for driver to accept",   bdg:"sb-pending"},
@@ -331,6 +549,8 @@
     const banner=document.getElementById("sched-banner");
     if(r.isScheduled&&r.scheduledAt){
       document.getElementById("sched-dt").textContent="Scheduled: "+new Date(r.scheduledAt).toLocaleString([],{dateStyle:"medium",timeStyle:"short"});
+      const ssb=document.getElementById("ssb");
+      ssb.textContent=r.delayBufferMinutes>0?"Pickup time includes +"+r.delayBufferMinutes+" min flight delay buffer · Driver reminded 30 min before":"Driver will be reminded 30 min before";
       banner.style.display="flex";
     }else banner.style.display="none";
     document.getElementById("btn-cancel").disabled=r.status!=="pending";
@@ -343,9 +563,9 @@
     catch(e){document.getElementById("btn-cancel").disabled=false;}
   });
 
-  // History
+  // History (rolling 30-day window)
   onSnapshot(
-    query(collection(db,"ride_requests"),where("customerId","==",uid),where("status","in",["completed","rejected","cancelled"]),orderBy("createdAt","desc")),
+    query(collection(db,"ride_requests"),where("customerId","==",uid),where("status","in",["completed","rejected","cancelled"]),where("createdAt",">=",historyCutoffTs()),orderBy("createdAt","desc")),
     snap=>{
       const list=document.getElementById("hlist"),cnt=document.getElementById("hcnt");
       cnt.textContent=snap.size?`(${snap.size})`:"";
@@ -354,12 +574,38 @@
       snap.forEach(d=>{
         const r=d.data(),date=r.createdAt?.toDate?r.createdAt.toDate().toLocaleDateString():"—";
         const sched=r.isScheduled&&r.scheduledAt?`<div style="font-size:13px;color:#a5b4fc;margin-bottom:5px">📅 ${new Date(r.scheduledAt).toLocaleString([],{dateStyle:"short",timeStyle:"short"})}</div>`:"";
+        const air = r.type==="airport" ? `<div style="font-size:13px;color:#a5b4fc;margin-bottom:5px">✈️ ${r.airportName||"Airport"} · Flight ${r.flightNo||"—"} · ${r.passengers||"?"} pax</div>` : "";
         const item=document.createElement("div");item.className="hi";
-        item.innerHTML=`<div class="hi-rt"><span>📍 ${r.pickup||"—"}</span><span style="color:var(--muted)">→</span><span>🏁 ${r.drop||"—"}</span></div>${sched}<div class="hi-bt"><span class="hi-date">${date}</span><span class="hi-st hs-${r.status}">${r.status}</span></div>`;
+        item.innerHTML=`<div class="hi-rt"><span>📍 ${r.pickup||"—"}</span><span style="color:var(--muted)">→</span><span>🏁 ${r.drop||"—"}</span></div>${air}${sched}<div class="hi-bt"><span class="hi-date">${date}</span><span class="hi-st hs-${r.status}">${r.status}</span></div>`;
         list.appendChild(item);
       });
+    },
+    err=>{
+      console.error("[History]",err.code,err.message);
+      document.getElementById("hlist").innerHTML='<div class="hem">Could not load history. Create the Firestore composite index if the console shows a link.</div>';
     }
   );
+
+
+
+  const rideType = document.getElementById("rideType");
+
+  rideType.addEventListener("change", () => {
+    if (rideType.value !== "airport") {
+      document.getElementById("airportSelect").selectedIndex = 0;
+      document.getElementById("inp-airport-city").value = "";
+      document.getElementById("flightNo").value = "";
+      document.getElementById("passengers").value = "";
+      document.getElementById("chk-flight-buffer").checked = false;
+    }
+    rideLocationModeUI();
+  });
+
+  document.getElementById("tripType").addEventListener("change", syncAirportCityLabel);
+
+  rideLocationModeUI();
+
+
 </script>
 </body>
 </html>

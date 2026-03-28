@@ -315,6 +315,12 @@
     .sched-ico { font-size: 1rem; margin-top: 1px; }
     .sched-dt  { font-size: 14px; font-weight: 700; color: #c7d2fe; }
     .sched-rel { font-size: 12px; color: #818cf8; margin-top: 2px; }
+    .airport-meta { background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.22); border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; font-size: 13px; line-height: 1.55; }
+    .airport-meta .am-t { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--accent); margin-bottom: 6px; }
+    .airport-meta .am-grid { display: grid; gap: 4px; }
+    .airport-meta .am-row { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+    .airport-meta .am-k { color: var(--sub); font-size: 12px; }
+    .airport-meta .am-v { font-weight: 600; color: var(--text); text-align: right; }
     .req-route { font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-bottom: 12px; line-height: 1.6; }
     .arr { color: var(--muted); font-size: 13px; }
     .req-actions { display: flex; gap: 7px; flex-wrap: wrap; }
@@ -338,6 +344,15 @@
       padding: 12px 13px; cursor: pointer; transition: border-color .2s, color .2s;
     }
     .btn-rej:active { border-color: var(--red); color: var(--red); }
+
+    .self-ride-wrap { padding: 0 14px 12px; }
+    .self-ride-card { background: linear-gradient(135deg, rgba(16,185,129,.14), rgba(16,185,129,.06)); border: 1.5px solid rgba(16,185,129,.5); border-radius: 14px; padding: 14px 15px; margin-bottom: 2px; }
+    .self-ride-h { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--green); margin-bottom: 10px; }
+    .self-ride-phone { display: block; font-size: 16px; font-weight: 700; color: var(--green); text-decoration: none; margin-bottom: 10px; }
+    .self-ride-route { font-size: 14px; font-weight: 600; line-height: 1.45; margin-bottom: 8px; word-break: break-word; }
+    .self-ride-air { font-size: 13px; color: #fbbf24; font-weight: 600; margin-bottom: 10px; }
+    .self-ride-done { width: 100%; border: none; border-radius: 11px; background: linear-gradient(135deg, #10b981, #059669); color: #fff; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 15px; font-weight: 700; padding: 14px; cursor: pointer; transition: opacity .2s; }
+    .self-ride-done:disabled { opacity: .45; cursor: not-allowed; }
 
     /* ═══════════════════════════════════════════════
        DISPATCH FORM
@@ -421,6 +436,7 @@
     ═══════════════════════════════════════════════ */
     .hist-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; }
     .hist-cnt { font-size: 13px; color: var(--sub); margin-top: 2px; }
+    .hist-hint { font-size: 11px; color: var(--sub); margin-top: 4px; font-weight: 500; }
     #btn-csv { background: var(--blue); color: #fff; border: none; border-radius: 9px; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 13px; font-weight: 700; padding: 8px 13px; cursor: pointer; transition: opacity .2s; }
     #btn-csv:hover { opacity: .85; }
     .hi { background: var(--card); border: 1px solid var(--border); border-radius: var(--r); padding: 13px; animation: up .25s ease; }
@@ -538,6 +554,16 @@
     <div class="sp"><div class="n np" id="st-r">0</div><div class="l">Total</div></div>
   </div>
 
+  <div id="super-self-ride-wrap" class="self-ride-wrap" style="display:none">
+    <div class="self-ride-card">
+      <div class="self-ride-h">🚗 Your active ride</div>
+      <a class="self-ride-phone" id="ssr-phone" href="#">📞 —</a>
+      <div class="self-ride-route"><span>📍</span> <span id="ssr-pickup">—</span> <span style="color:var(--sub)">→</span> <span>🏁</span> <span id="ssr-drop">—</span></div>
+      <div id="ssr-air" class="self-ride-air" style="display:none"></div>
+      <button type="button" class="self-ride-done" id="btn-super-ride-done">✅ Ride finished — Drop done</button>
+    </div>
+  </div>
+
   <!-- Tabs -->
   <div id="tabs">
     <button class="tb active" data-tab="requests">📥 Requests<span class="ndot" id="ndot"></span></button>
@@ -594,7 +620,7 @@
   <!-- ── HISTORY ── -->
   <div class="panel" id="tab-history">
     <div class="hist-bar">
-      <div><div class="sec" style="margin:0">Completed Rides</div><div class="hist-cnt" id="hcnt">0 rides</div></div>
+      <div><div class="sec" style="margin:0">Completed Rides</div><div class="hist-cnt" id="hcnt">0 rides</div><div class="hist-hint">Last 30 days only</div></div>
       <button id="btn-csv">⬇ CSV</button>
     </div>
     <div id="hist-list"><div class="empty">No completed rides yet.</div></div>
@@ -603,6 +629,7 @@
   <!-- ── ALL RIDES (super admin only) ── -->
   <div class="panel" id="tab-allrides">
     <div class="sec">All Rides — Full Overview</div>
+    <div class="hist-hint" style="margin:-4px 0 10px">Created in the last 30 days</div>
     <div id="all-rides-list"><div class="empty">Loading…</div></div>
   </div>
 
@@ -624,9 +651,13 @@
 import { requireAuth, logoutUser, promoteUser, db } from "./auth.js";
 import {
   collection, doc,
-  addDoc, setDoc, updateDoc, getDocs,
+  addDoc, setDoc, updateDoc, getDoc, getDocs,
   onSnapshot, query, where, orderBy, serverTimestamp,
+  Timestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const HISTORY_DAYS = 30;
+const historyCutoffTs = () => Timestamp.fromMillis(Date.now() - HISTORY_DAYS * 24 * 60 * 60 * 1000);
 
 // ── Auth ────────────────────────────────────────────────────
 const { user, role, email } = await requireAuth("superadmin");
@@ -658,6 +689,59 @@ function toast(msg, color = "var(--accent)") {
   el.textContent = msg; el.style.borderLeftColor = color;
   el.classList.add("show"); setTimeout(() => el.classList.remove("show"), 3200);
 }
+
+// ── Ride you accepted yourself (driverId "superadmin") ────────
+let superSelfRideId = null;
+onSnapshot(
+  query(collection(db, "rides"), where("driverId", "==", "superadmin"), where("status", "==", "ongoing")),
+  snap => {
+    const wrap = document.getElementById("super-self-ride-wrap");
+    if (!snap.empty) {
+      const d = snap.docs[0];
+      superSelfRideId = d.id;
+      const r = d.data();
+      document.getElementById("ssr-pickup").textContent = r.pickup || "—";
+      document.getElementById("ssr-drop").textContent = r.drop || "—";
+      const ph = r.customerPhone || "";
+      const tel = document.getElementById("ssr-phone");
+      if (ph) { tel.textContent = "📞 " + ph; tel.href = "tel:" + ph; }
+      else { tel.textContent = "No phone on ride"; tel.href = "#"; }
+      const air = document.getElementById("ssr-air");
+      if (r.type === "airport" || r.airportName) {
+        air.style.display = "block";
+        air.textContent = "✈️ " + (r.airportName || "Airport") + " · Flight " + (r.flightNo || "—") + " · " + (r.passengers != null && r.passengers !== "" ? r.passengers : "?") + " pax";
+      } else {
+        air.style.display = "none";
+      }
+      wrap.style.display = "block";
+    } else {
+      superSelfRideId = null;
+      wrap.style.display = "none";
+    }
+  },
+  err => console.error("[Super self ride]", err.code, err.message)
+);
+
+document.getElementById("btn-super-ride-done").addEventListener("click", async () => {
+  if (!superSelfRideId) return;
+  const btn = document.getElementById("btn-super-ride-done");
+  btn.disabled = true;
+  btn.textContent = "Completing…";
+  try {
+    const snap = await getDoc(doc(db, "rides", superSelfRideId));
+    await updateDoc(doc(db, "rides", superSelfRideId), { status: "completed", completedAt: serverTimestamp() });
+    if (snap.exists() && snap.data().requestId) {
+      try {
+        await updateDoc(doc(db, "ride_requests", snap.data().requestId), { status: "completed", completedAt: serverTimestamp() });
+      } catch (e) {}
+    }
+    toast("✅ Ride completed!", "var(--green)");
+  } catch (e) {
+    toast("❌ " + (e.message || "Failed"), "var(--red)");
+  }
+  btn.disabled = false;
+  btn.textContent = "✅ Ride finished — Drop done";
+});
 
 // ── Stats ────────────────────────────────────────────────────
 let sC=0, sD=0, sA=0, sQ=0, sL=0, sR=0;
@@ -743,9 +827,11 @@ onSnapshot(query(collection(db, "rides"), orderBy("createdAt", "desc")), snap =>
 
   active.forEach(d => {
     const r = d.data(), st = r.status || "pending";
+    const air = (r.type==="airport"||r.airportName) ? `<div style="font-size:12px;color:#fbbf24;margin:6px 0 0;font-weight:600">✈️ ${r.airportName||"Airport"} · Flight ${r.flightNo||"—"} · ${r.passengers!=null&&r.passengers!==""?r.passengers:"?"} pax</div>` : "";
     const c = document.createElement("div"); c.className = `ride-card s-${st}`;
     c.innerHTML = `
       <div class="ride-rt"><span>📍 ${r.pickup||"—"}</span><span class="arr">→</span><span>🏁 ${r.drop||"—"}</span></div>
+      ${air}
       <div class="ride-bt">
         <span class="ride-dr">${r.driverId ? `🧑 ${r.driverEmail||r.driverId}` : "Unassigned"}</span>
         <span class="rst"><span class="sd"></span>${st}</span>
@@ -759,7 +845,7 @@ onSnapshot(query(collection(db, "rides"), orderBy("createdAt", "desc")), snap =>
 // ════════════════════════════════════════════════════════════
 let histData = [];
 onSnapshot(
-  query(collection(db, "rides"), where("status", "==", "completed"), orderBy("completedAt", "desc")),
+  query(collection(db, "rides"), where("status", "==", "completed"), where("completedAt", ">=", historyCutoffTs()), orderBy("completedAt", "desc")),
   snap => {
     histData = [];
     const list = document.getElementById("hist-list");
@@ -770,9 +856,11 @@ onSnapshot(
       const r = d.data(), date = r.completedAt?.toDate ? r.completedAt.toDate().toLocaleString() : "—";
       const drv = r.driverEmail || r.driverId || "Unknown";
       histData.push({ pickup: r.pickup||"", drop: r.drop||"", driver: drv, phone: r.customerPhone||"", completed: date });
+      const air = (r.type==="airport"||r.airportName) ? `<div style="font-size:13px;color:#fbbf24;margin-bottom:6px;font-weight:600">✈️ ${r.airportName||"Airport"} · Flt ${r.flightNo||"—"} · ${r.passengers||"?"} pax</div>` : "";
       const item = document.createElement("div"); item.className = "hi";
       item.innerHTML = `
         <div class="hi-rt"><span>📍 ${r.pickup||"—"}</span><span style="color:var(--muted)">→</span><span>🏁 ${r.drop||"—"}</span></div>
+        ${air}
         <div class="hi-mt">
           ${r.customerPhone ? `<span><a href="tel:${r.customerPhone}" style="color:var(--green);font-weight:700;text-decoration:none">📞 ${r.customerPhone}</a></span>` : ""}
           <span>🧑 ${drv}</span>
@@ -780,6 +868,10 @@ onSnapshot(
         </div>`;
       list.appendChild(item);
     });
+  },
+  err => {
+    console.error("[History]", err.code, err.message);
+    document.getElementById("hist-list").innerHTML = '<div class="empty">Could not load history. Create the Firestore index from the console link if shown.</div>';
   }
 );
 
@@ -798,15 +890,17 @@ document.getElementById("btn-csv").addEventListener("click", () => {
 // ════════════════════════════════════════════════════════════
 // ALL RIDES (super admin complete view with all statuses)
 // ════════════════════════════════════════════════════════════
-onSnapshot(query(collection(db, "rides"), orderBy("createdAt", "desc")), snap => {
+onSnapshot(query(collection(db, "rides"), where("createdAt", ">=", historyCutoffTs()), orderBy("createdAt", "desc")), snap => {
   const list = document.getElementById("all-rides-list"); list.innerHTML = "";
-  if (snap.empty) { list.innerHTML = '<div class="empty">No rides yet.</div>'; return; }
+  if (snap.empty) { list.innerHTML = '<div class="empty">No rides in the last 30 days.</div>'; return; }
   snap.forEach(d => {
     const r = d.data(), st = r.status || "pending";
     const created = r.createdAt?.toDate ? r.createdAt.toDate().toLocaleString() : "—";
     const card = document.createElement("div"); card.className = "ar-card";
+    const airAll = (r.type==="airport"||r.airportName) ? `<div style="font-size:12px;color:#fbbf24;margin-bottom:8px;font-weight:600">✈️ ${r.airportName||"Airport"} · ${r.flightNo||"—"} · ${r.passengers||"?"} pax · ${({oneway:"One-way",round:"Two-way"}[r.journeyType])||r.journeyType||""}</div>` : "";
     card.innerHTML = `
       <div class="ar-rt"><span>📍 ${r.pickup||"—"}</span><span style="color:var(--muted)">→</span><span>🏁 ${r.drop||"—"}</span></div>
+      ${airAll}
       <div class="ar-meta">
         ${r.customerName  ? `<span>👤 ${r.customerName}</span>` : ""}
         ${r.customerPhone ? `<span><a href="tel:${r.customerPhone}" style="color:var(--green);font-weight:700;text-decoration:none">📞 ${r.customerPhone}</a></span>` : ""}
@@ -818,6 +912,9 @@ onSnapshot(query(collection(db, "rides"), orderBy("createdAt", "desc")), snap =>
       </div>`;
     list.appendChild(card);
   });
+}, err => {
+  console.error("[All rides]", err.code, err.message);
+  document.getElementById("all-rides-list").innerHTML = '<div class="empty">Could not load rides. Create the Firestore index from the console link if shown.</div>';
 });
 
 // ════════════════════════════════════════════════════════════
@@ -918,6 +1015,26 @@ function renderUsers() {
 // CUSTOMER REQUESTS  —  broadcast model
 // (Same full feature set as admin panel)
 // ════════════════════════════════════════════════════════════
+function airportMetaHtml(r) {
+  if (r.type !== "airport" && !r.airportName) return "";
+  const tripL = { arrival: "Arrival", departure: "Departure" }[r.tripType] || r.tripType || "—";
+  const jL = { oneway: "One-way", round: "Two-way" }[r.journeyType] || r.journeyType || "—";
+  const pax = r.passengers != null && r.passengers !== "" ? String(r.passengers) : "—";
+  const buf = r.delayBufferMinutes > 0 ? `<div class="am-row"><span class="am-k">Delay buffer</span><span class="am-v">+${r.delayBufferMinutes} min</span></div>` : "";
+  return `<div class="airport-meta"><div class="am-t">✈️ Airport ride</div><div class="am-grid"><div class="am-row"><span class="am-k">Airport</span><span class="am-v">${r.airportName || "—"}</span></div><div class="am-row"><span class="am-k">Arrival / Departure</span><span class="am-v">${tripL}</span></div><div class="am-row"><span class="am-k">Flight</span><span class="am-v">${r.flightNo || "—"}</span></div><div class="am-row"><span class="am-k">Passengers</span><span class="am-v">${pax}</span></div><div class="am-row"><span class="am-k">Journey</span><span class="am-v">${jL}</span></div>${buf}</div></div>`;
+}
+function rideAirportFields(r) {
+  return {
+    type: r.type || "normal",
+    airportName: r.airportName || "",
+    tripType: r.tripType || "",
+    flightNo: r.flightNo || "",
+    passengers: r.passengers || "",
+    journeyType: r.journeyType || "",
+    delayBufferMinutes: r.delayBufferMinutes || 0,
+  };
+}
+
 console.log("[SuperAdmin] Starting ride_requests listener…");
 
 onSnapshot(
@@ -956,6 +1073,7 @@ onSnapshot(
             <div class="sched-rel">${relTime(new Date(r.scheduledAt))}</div>
           </div>
         </div>` : ""}
+        ${airportMetaHtml(r)}
         <div class="req-route">
           <span>📍 ${r.pickup||"—"}</span><span class="arr">→</span><span>🏁 ${r.drop||"—"}</span>
         </div>
@@ -976,6 +1094,7 @@ onSnapshot(
             requestId: rId, customerId: r.customerId || null,
             customerName: r.customerName || "", customerPhone: r.customerPhone || "",
             isScheduled: r.isScheduled || false, scheduledAt: r.scheduledAt || null,
+            ...rideAirportFields(r),
             createdAt: serverTimestamp(),
           });
           await updateDoc(doc(db, "ride_requests", rId), { status: "dispatched", rideId: rideRef.id });
@@ -997,6 +1116,7 @@ onSnapshot(
             requestId: rId, customerId: r.customerId || null,
             customerName: r.customerName || "", customerPhone: r.customerPhone || "",
             isScheduled: r.isScheduled || false, scheduledAt: r.scheduledAt || null,
+            ...rideAirportFields(r),
             createdAt: serverTimestamp(),
           });
           await updateDoc(doc(db, "ride_requests", rId), {

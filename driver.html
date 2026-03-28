@@ -46,7 +46,7 @@
 
   /* ===== BUTTONS (VERY IMPORTANT) ===== */
   button, .act-btn, .btn-bc, .btn-self, .btn-rej,
-  #btn-book, #btn-go, #btn-complete, .dis-btn{
+  #btn-book, #btn-go, .btn-complete-one, .dis-btn{
     height: 56px !important;
     font-size: 17px !important;
     border-radius: 16px !important;
@@ -108,6 +108,7 @@
     -webkit-overflow-scrolling: touch;
   }
 }
+  
 
 
 
@@ -196,7 +197,12 @@
     .rval{font-size:15px;font-weight:600;color:var(--text);margin-top:2px}
     .rsep{width:2px;height:14px;background:var(--border);margin-left:8px}
 
-    #btn-complete{
+    .active-rides-list{display:flex;flex-direction:column;gap:14px}
+    .active-ride-item{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px 15px}
+    .active-ride-item .ride-status-badge{margin-bottom:12px}
+    .active-ride-item .active-phone{margin-bottom:12px}
+    .active-ride-item .btn-complete-one{width:100%;margin-top:14px}
+    .btn-complete-one{
       width:100%;border:none;border-radius:13px;
       background:linear-gradient(135deg,var(--green),#059669);
       color:#fff;font-family:'Plus Jakarta Sans',sans-serif;
@@ -204,11 +210,12 @@
       display:flex;align-items:center;justify-content:center;gap:8px;
       box-shadow:0 6px 20px rgba(16,185,129,.3);transition:opacity .2s,transform .12s;
     }
-    #btn-complete:active{transform:scale(.98)}
-    #btn-complete:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+    .btn-complete-one:active{transform:scale(.98)}
+    .btn-complete-one:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
 
     /* History */
     .h-empty{text-align:center;color:var(--sub);font-size:14px;padding:20px 0}
+    .hist-hint{font-size:12px;color:var(--sub);margin:-8px 0 12px}
     .h-item{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:13px 14px;margin-bottom:10px}
     .h-rt{display:flex;align-items:center;gap:5px;flex-wrap:wrap;font-size:15px;font-weight:600;margin-bottom:6px}
     .h-mt{font-size:13px;color:var(--sub)}
@@ -259,6 +266,9 @@
     .sched-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#818cf8}
     .sched-val{font-size:15px;font-weight:700;color:#c7d2fe;margin-top:3px}
 
+    .airport-block{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.28);border-radius:13px;padding:12px 14px;margin-bottom:12px}
+    .airport-block .ab-h{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-bottom:8px}
+
     .popup-actions{display:flex;gap:10px;margin-top:4px}
     .pop-accept{flex:1;border:none;border-radius:13px;background:linear-gradient(135deg,var(--green),#059669);color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-size:17px;font-weight:700;padding:16px;cursor:pointer;transition:opacity .2s}
     .pop-accept:disabled{opacity:.45;cursor:not-allowed}
@@ -299,7 +309,7 @@
   }
 
   /* 3. Larger Tap Targets (Minimum 48px height for accessibility) */
-  .act-btn, .btn-go, .dis-btn, .inp, #btn-complete {
+  .act-btn, .btn-go, .dis-btn, .inp, .btn-complete-one {
     height: 54px !important; /* Standard "easy-tap" height */
     font-size: 17px !important;
     border-radius: 16px !important; /* Softer, modern look */
@@ -354,25 +364,16 @@
     </div>
   </div>
 
-  <!-- Active ride card -->
+  <!-- Active ride card(s) — multiple non-overlapping rides supported -->
   <div id="active-card">
-    <div class="clabel">Active Ride</div>
-    <div class="ride-status-badge"><div class="pulse"></div>In Progress</div>
-
-    <!-- Customer phone prominently displayed -->
-    <a class="active-phone" id="active-phone" href="#">📞 Loading…</a>
-
-    <div class="route-box">
-      <div class="rrow"><div class="rico">📍</div><div><div class="rlbl">Pickup</div><div class="rval" id="act-pickup">—</div></div></div>
-      <div class="rsep"></div>
-      <div class="rrow"><div class="rico">🏁</div><div><div class="rlbl">Drop</div><div class="rval" id="act-drop">—</div></div></div>
-    </div>
-    <button id="btn-complete">✅ Ride Completed — Drop Done</button>
+    <div class="clabel">Active rides</div>
+    <div id="active-rides-list" class="active-rides-list"></div>
   </div>
 
   <!-- History -->
   <div class="card" id="hist-card">
     <div class="clabel">My Ride History <span id="h-cnt" style="color:var(--sub)"></span></div>
+    <div class="hist-hint">Last 30 days only</div>
     <div id="h-list"><div class="h-empty">No completed rides yet.</div></div>
   </div>
 
@@ -384,11 +385,129 @@
   import { requireAuth, logoutUser, db } from "./auth.js";
   import {
     collection, doc,
-    setDoc, updateDoc, getDoc, runTransaction,
+    setDoc, updateDoc, getDoc, getDocs, runTransaction,
     onSnapshot, query, where, orderBy, serverTimestamp,
+    Timestamp,
   } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+  const HISTORY_DAYS = 30;
+  const historyCutoffTs = () => Timestamp.fromMillis(Date.now() - HISTORY_DAYS * 24 * 60 * 60 * 1000);
+
   const merge = { merge: true };
+
+  /** Assumed trip length + gap so back-to-back rides do not overlap. */
+  const DEFAULT_RIDE_MS = 90 * 60 * 1000;
+  const BETWEEN_RIDES_GAP_MS = 12 * 60 * 1000;
+
+  function delayBufferMs(r) {
+    const n = Number(r?.delayBufferMinutes);
+    return Number.isFinite(n) && n > 0 ? n * 60 * 1000 : 0;
+  }
+
+  function firestoreTimeToMs(t) {
+    if (!t) return null;
+    if (typeof t.toMillis === "function") return t.toMillis();
+    if (typeof t.seconds === "number") return t.seconds * 1000;
+    return null;
+  }
+
+  /** Window [start,end] the ride is expected to occupy. */
+  function ongoingRideWindow(r) {
+    const sched = r.isScheduled && r.scheduledAt;
+    const schedMs = sched ? new Date(r.scheduledAt).getTime() : NaN;
+    const pad = delayBufferMs(r);
+    if (sched && Number.isFinite(schedMs)) {
+      return { start: schedMs, end: schedMs + DEFAULT_RIDE_MS + pad };
+    }
+    const startMs = firestoreTimeToMs(r.acceptedAt) ?? firestoreTimeToMs(r.createdAt) ?? Date.now();
+    return { start: startMs, end: startMs + DEFAULT_RIDE_MS + pad };
+  }
+
+  function candidateRideWindow(r, nowMs) {
+    const sched = r.isScheduled && r.scheduledAt;
+    const schedMs = sched ? new Date(r.scheduledAt).getTime() : NaN;
+    const pad = delayBufferMs(r);
+    if (sched && Number.isFinite(schedMs)) {
+      return { start: schedMs, end: schedMs + DEFAULT_RIDE_MS + pad };
+    }
+    return { start: nowMs, end: nowMs + DEFAULT_RIDE_MS + pad };
+  }
+
+  function windowsConflict(a, b) {
+    if (!a || !b) return true;
+    return !(a.end + BETWEEN_RIDES_GAP_MS <= b.start || b.end + BETWEEN_RIDES_GAP_MS <= a.start);
+  }
+
+  function candidateConflictsOngoing(candidateRide, ongoingDataList) {
+    const cand = candidateRideWindow(candidateRide, Date.now());
+    for (const r of ongoingDataList) {
+      if (windowsConflict(cand, ongoingRideWindow(r))) return true;
+    }
+    return false;
+  }
+
+  async function fetchOngoingRidesData() {
+    const snap = await getDocs(query(
+      collection(db, "rides"),
+      where("driverId", "==", driverId),
+      where("status", "==", "ongoing")
+    ));
+    return snap.docs.map((d) => d.data());
+  }
+
+  function sortOngoingDocs(docs) {
+    return [...docs].sort((da, db) => {
+      const ra = da.data(), rb = db.data();
+      const ta = ra.isScheduled && ra.scheduledAt ? new Date(ra.scheduledAt).getTime() : 0;
+      const tb = rb.isScheduled && rb.scheduledAt ? new Date(rb.scheduledAt).getTime() : 0;
+      if (ta !== tb) return ta - tb;
+      const ca = ra.createdAt?.toMillis?.() ?? 0, cb = rb.createdAt?.toMillis?.() ?? 0;
+      return ca - cb;
+    });
+  }
+
+  function airportActiveBlockHtml(ride) {
+    if (ride.type !== "airport" && !ride.airportName) return "";
+    const tripL = { arrival: "Arrival", departure: "Departure" }[ride.tripType] || ride.tripType || "—";
+    const jL = { oneway: "One-way", round: "Two-way" }[ride.journeyType] || ride.journeyType || "—";
+    const buf = ride.delayBufferMinutes > 0 ? ` · +${ride.delayBufferMinutes} min buffer` : "";
+    return `
+      <div class="airport-block" style="margin-bottom:14px">
+        <div class="ab-h">✈️ Airport ride</div>
+        <div class="popup-row"><div class="plbl">Airport · Trip · Journey</div><div class="pval">${ride.airportName || "—"} · ${tripL} · ${jL}${buf}</div></div>
+        <div class="popup-row"><div class="plbl">Flight</div><div class="pval">${ride.flightNo || "—"}</div></div>
+        <div class="popup-row"><div class="plbl">Passengers</div><div class="pval">${ride.passengers != null && ride.passengers !== "" ? String(ride.passengers) : "—"}</div></div>
+      </div>`;
+  }
+
+  function renderActiveRides(docs) {
+    const root = document.getElementById("active-rides-list");
+    root.innerHTML = "";
+    for (const d of docs) {
+      const r = d.data();
+      const ph = r.customerPhone || "";
+      const phoneHtml = ph
+        ? `<a class="active-phone" href="tel:${ph}">📞 ${ph}</a>`
+        : `<a class="active-phone" href="#">No phone provided</a>`;
+      const schedHint = r.isScheduled && r.scheduledAt
+        ? `<div style="font-size:12px;color:#818cf8;font-weight:700;margin-bottom:10px">📅 ${new Date(r.scheduledAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}</div>`
+        : "";
+      const el = document.createElement("div");
+      el.className = "active-ride-item";
+      el.innerHTML = `
+        <div class="ride-status-badge"><div class="pulse"></div>In progress</div>
+        ${schedHint}
+        ${phoneHtml}
+        <div class="route-box" style="margin-bottom:0">
+          <div class="rrow"><div class="rico">📍</div><div><div class="rlbl">Pickup</div><div class="rval">${r.pickup || "—"}</div></div></div>
+          <div class="rsep"></div>
+          <div class="rrow"><div class="rico">🏁</div><div><div class="rlbl">Drop</div><div class="rval">${r.drop || "—"}</div></div></div>
+        </div>
+        ${airportActiveBlockHtml(r)}
+        <button type="button" class="btn-complete-one" data-ride-id="${d.id}">✅ Ride completed — drop done</button>`;
+      root.appendChild(el);
+    }
+  }
 
   // ── Auth ───────────────────────────────────────────────────
   const { user, driverId, email, name, phone } = await requireAuth("driver");
@@ -415,6 +534,15 @@
     const el=document.getElementById("toast");
     el.textContent=msg; el.style.borderLeftColor=color;
     el.classList.add("show"); setTimeout(()=>el.classList.remove("show"),3200);
+  }
+
+  function airportRidePopupHtml(ride){
+    if(ride.type!=="airport"&&!ride.airportName)return"";
+    const tripL={arrival:"Arrival",departure:"Departure"}[ride.tripType]||ride.tripType||"—";
+    const jL={oneway:"One-way",round:"Two-way"}[ride.journeyType]||ride.journeyType||"—";
+    const pax=ride.passengers!=null&&ride.passengers!==""?String(ride.passengers):"—";
+    const buf=ride.delayBufferMinutes>0?`<div class="popup-row"><div class="plbl">Delay buffer</div><div class="pval">+${ride.delayBufferMinutes} min</div></div>`:"";
+    return`<div class="airport-block"><div class="ab-h">✈️ Airport ride</div><div class="popup-section" style="margin-bottom:0;background:transparent;padding:0"><div class="popup-row"><div class="plbl">Airport</div><div class="pval">${ride.airportName||"—"}</div></div><div class="popup-row"><div class="plbl">Arrival / Departure</div><div class="pval">${tripL}</div></div><div class="popup-row"><div class="plbl">Flight</div><div class="pval">${ride.flightNo||"—"}</div></div><div class="popup-row"><div class="plbl">Passengers</div><div class="pval">${pax}</div></div><div class="popup-row"><div class="plbl">Journey</div><div class="pval">${jL}</div></div>${buf}</div></div>`;
   }
 
   // ── Logout ──────────────────────────────────────────────────
@@ -453,7 +581,6 @@
 
   // ── Ride listeners ──────────────────────────────────────────
   const shownRides = new Set();
-  let activeRideId = null;
 
   function startRideListener() {
     // 1. BROADCAST rides — all drivers see these
@@ -479,46 +606,55 @@
       err=>console.error("[Broadcast]",err.message)
     );
 
-    // 2. ONGOING rides for THIS driver
+    // 2. ONGOING rides for THIS driver (may be multiple if times do not overlap)
     onSnapshot(
       query(collection(db,"rides"), where("driverId","==",driverId), where("status","==","ongoing")),
       snap => {
+        const card = document.getElementById("active-card");
         if (!snap.empty) {
-          const d=snap.docs[0]; activeRideId=d.id;
-          const r=d.data();
-          document.getElementById("act-pickup").textContent = r.pickup||"—";
-          document.getElementById("act-drop").textContent   = r.drop  ||"—";
-          // Show customer phone prominently
-          const ph=r.customerPhone||"";
-          const phoneEl=document.getElementById("active-phone");
-          if(ph){phoneEl.textContent="📞 "+ph;phoneEl.href="tel:"+ph;}
-          else  {phoneEl.textContent="No phone provided";phoneEl.href="#";}
-          document.getElementById("active-card").classList.add("show");
+          renderActiveRides(sortOngoingDocs(snap.docs));
+          card.classList.add("show");
         } else {
-          document.getElementById("active-card").classList.remove("show");
-          activeRideId=null;
+          card.classList.remove("show");
+          document.getElementById("active-rides-list").innerHTML = "";
         }
       },
       err=>console.error("[Ongoing]",err.message)
     );
   }
 
-  // ── Complete ride ───────────────────────────────────────────
-  document.getElementById("btn-complete").addEventListener("click", async () => {
-    if (!activeRideId) return;
-    const btn=document.getElementById("btn-complete");
-    btn.disabled=true; btn.textContent="Completing…";
+  // ── Complete ride (one card per active ride) ─────────────────
+  document.getElementById("active-rides-list").addEventListener("click", async (e) => {
+    const btn = e.target.closest(".btn-complete-one");
+    if (!btn || btn.disabled) return;
+    const rideId = btn.dataset.rideId;
+    if (!rideId) return;
+    btn.disabled = true;
+    const prevText = btn.textContent;
+    btn.textContent = "Completing…";
     try {
-      const snap=await getDoc(doc(db,"rides",activeRideId));
-      await updateDoc(doc(db,"rides",activeRideId),{status:"completed",completedAt:serverTimestamp()});
-      await setDoc(doc(db,"drivers",driverId),{status:"available",lastUpdated:serverTimestamp()},merge);
-      if(snap.exists()&&snap.data().requestId){
-        try{await updateDoc(doc(db,"ride_requests",snap.data().requestId),{status:"completed",completedAt:serverTimestamp()});}catch(e){}
+      const snap = await getDoc(doc(db, "rides", rideId));
+      await updateDoc(doc(db, "rides", rideId), { status: "completed", completedAt: serverTimestamp() });
+      if (snap.exists() && snap.data().requestId) {
+        try { await updateDoc(doc(db, "ride_requests", snap.data().requestId), { status: "completed", completedAt: serverTimestamp() }); } catch (e) {}
       }
-      updateStatusUI("available");
-      toast("🎉 Ride completed!","var(--green)");
-    }catch(e){console.error("[Complete]",e.message);}
-    btn.disabled=false; btn.textContent="✅ Ride Completed — Drop Done";
+      const remaining = await getDocs(query(
+        collection(db, "rides"),
+        where("driverId", "==", driverId),
+        where("status", "==", "ongoing")
+      ));
+      if (remaining.empty) {
+        await setDoc(doc(db, "drivers", driverId), { status: "available", lastUpdated: serverTimestamp() }, merge);
+        updateStatusUI("available");
+      } else {
+        updateStatusUI("busy");
+      }
+      toast("🎉 Ride completed!", "var(--green)");
+    } catch (e) {
+      console.error("[Complete]", e.message);
+      btn.disabled = false;
+      btn.textContent = prevText;
+    }
   });
 
   // ── Popup ───────────────────────────────────────────────────
@@ -533,6 +669,7 @@
       <div class="sched-block">
         <div class="sched-label">📅 Scheduled for</div>
         <div class="sched-val">${new Date(ride.scheduledAt).toLocaleString([],{dateStyle:"medium",timeStyle:"short"})}</div>
+        ${ride.delayBufferMinutes>0?`<div style="font-size:12px;color:#fbbf24;margin-top:4px;font-weight:600">Includes +${ride.delayBufferMinutes} min flight delay buffer</div>`:""}
       </div>`:"";;
 
     popup.innerHTML=`
@@ -550,6 +687,7 @@
           ${ride.customerName?`<div class="popup-section"><div class="popup-row"><div class="plbl">👤 Customer</div><div class="pval">${ride.customerName}</div></div></div>`:""}
 
           ${schedBlock}
+          ${airportRidePopupHtml(ride)}
 
           <div class="popup-section">
             <div class="popup-row"><div class="plbl">📍 Pickup</div><div class="pval">${ride.pickup||"N/A"}</div></div>
@@ -571,6 +709,14 @@
       btn.disabled=true; btn.textContent="Claiming…";
 
       try {
+        const existingOngoing = await fetchOngoingRidesData();
+        if (candidateConflictsOngoing(ride, existingOngoing)) {
+          btn.disabled = false;
+          btn.textContent = "✅ Accept Ride";
+          toast("⛔ Overlaps a ride you already accepted. Finish that one first or pick a different time.", "var(--red)");
+          return;
+        }
+
         let claimed=false;
         await runTransaction(db, async tx => {
           const snap=await tx.get(doc(db,"rides",rideId));
@@ -578,6 +724,7 @@
           if(snap.data().status!=="broadcast"){claimed=true;return;}
           tx.update(doc(db,"rides",rideId),{
             status:"ongoing", driverId, driverEmail:email||driverId,
+            acceptedAt: serverTimestamp(),
           });
         });
 
@@ -614,7 +761,7 @@
   // ── History ─────────────────────────────────────────────────
   function startHistoryListener() {
     onSnapshot(
-      query(collection(db,"rides"),where("driverId","==",driverId),where("status","==","completed"),orderBy("completedAt","desc")),
+      query(collection(db,"rides"),where("driverId","==",driverId),where("status","==","completed"),where("completedAt",">=",historyCutoffTs()),orderBy("completedAt","desc")),
       snap=>{
         const list=document.getElementById("h-list");
         document.getElementById("h-cnt").textContent=snap.size?`(${snap.size})`:"";
@@ -623,12 +770,14 @@
         snap.forEach(d=>{
           const r=d.data(),date=r.completedAt?.toDate?r.completedAt.toDate().toLocaleString():"—";
           const item=document.createElement("div");item.className="h-item";
+          const air=r.type==="airport"||r.airportName?`<div style="font-size:13px;color:#fbbf24;margin-bottom:6px;font-weight:600">✈️ ${r.airportName||"Airport"} · Flt ${r.flightNo||"—"} · ${r.passengers||"?"} pax</div>`:"";
           item.innerHTML=`
             <div class="h-rt">
               <span>📍 ${r.pickup||"—"}</span>
               <span style="color:var(--muted)">→</span>
               <span>🏁 ${r.drop||"—"}</span>
             </div>
+            ${air}
             <div class="h-mt">
               ${r.customerPhone?`<div><a href="tel:${r.customerPhone}" style="color:var(--green);font-weight:700;text-decoration:none">📞 ${r.customerPhone}</a></div>`:""}
               <div>🕐 ${date}</div>
@@ -636,7 +785,10 @@
           list.appendChild(item);
         });
       },
-      err=>console.error("[History]",err.message)
+      err=>{
+        console.error("[History]",err.code,err.message);
+        document.getElementById("h-list").innerHTML='<div class="h-empty">Could not load history. Create the Firestore index from the console link if shown.</div>';
+      }
     );
   }
 

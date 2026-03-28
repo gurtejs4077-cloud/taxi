@@ -1,0 +1,17 @@
+{
+  "name": "rideapp-grand",
+  "private": true,
+  "scripts": {
+    "www:sync": "node scripts/sync-www.mjs",
+    "cap:sync": "npm run www:sync && npx cap sync",
+    "android:open": "npx cap open android",
+    "android:add": "npx cap add android",
+    "android:build": "npm run cap:sync && node scripts/write-local-properties.mjs && cd android && ANDROID_SDK_ROOT=\"${ANDROID_SDK_ROOT:-$ANDROID_HOME}\" ./gradlew assembleDebug",
+    "android:build:sh": "bash scripts/build-apk.sh"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^6.2.0",
+    "@capacitor/cli": "^6.2.0",
+    "@capacitor/core": "^6.2.0"
+  }
+}

@@ -779,7 +779,7 @@
      FIREBASE + APP LOGIC
 ═══════════════════════════════════════════════ -->
 <script type="module">
-import { requireAuth, logoutUser, promoteUser, db, app } from "./auth.js";
+import { requireAuth, logoutUser, promoteUser, db } from "./auth.js";
 import { initMapSidebarSplit } from "./map-sidebar-split.js";
 import { initRideAppNotifications, createAppNotification } from "./notifications.js";
 import {
@@ -799,7 +799,7 @@ const historyCutoffTs = () => Timestamp.fromMillis(Date.now() - HISTORY_DAYS * 2
 // ── Auth ────────────────────────────────────────────────────
 const { user, role, email } = await requireAuth("superadmin");
 document.getElementById("sa-email").textContent = email;
-initRideAppNotifications({ db, app, userId: user.uid, role: "superadmin" });
+initRideAppNotifications({ db, userId: user.uid, role: "superadmin" });
 document.getElementById("btn-out").addEventListener("click", async () => {
   await logoutUser(); window.location.href = "login.html";
 });

@@ -529,7 +529,7 @@
 <div id="toast"></div>
 
 <script type="module">
-import { requireAuth, logoutUser, promoteUser, db, app } from "./auth.js";
+import { requireAuth, logoutUser, promoteUser, db } from "./auth.js";
 import { initMapSidebarSplit } from "./map-sidebar-split.js";
 import { initRideAppNotifications, createAppNotification } from "./notifications.js";
 import { pendingVisibleToAdmin } from "./ride-request-stages.js";
@@ -546,7 +546,7 @@ const historyCutoffTs = () => Timestamp.fromMillis(Date.now() - HISTORY_DAYS * 2
 const { user, role, email, name, phone } = await requireAuth("admin");
 document.getElementById("ae").textContent = email || user.email;
 
-initRideAppNotifications({ db, app, userId: user.uid, role });
+initRideAppNotifications({ db, userId: user.uid, role });
 
 // Admins (not superadmin) share location every 5 min for superadmin map only
 if (role === "admin" && navigator.geolocation) {

@@ -1,5 +1,5 @@
 // ============================================================
-// RideApp — in-app notifications + alert ring + sound
+// RideApp — in-app notifications only (tab open): bell, panel, alert ring + sound
 // Firestore: app_notifications/{id}
 //   title, body, kind?, createdAt,
 //   roles?: string[]     — any user whose role is listed
@@ -16,8 +16,6 @@ import {
   onSnapshot,
   serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-import { tryEnableWebPush } from "./push-notifications.js";
 
 export const NOTIF_COLLECTION = "app_notifications";
 
@@ -217,14 +215,8 @@ function mergeById(mapA, mapB) {
 /**
  * Bell + panel + Firestore listeners (role + personal). Plays sound / ring on new items.
  */
-export function initRideAppNotifications({ db, userId, role, app = null }) {
+export function initRideAppNotifications({ db, userId, role }) {
   installNotificationStyles();
-
-  if (app && userId) {
-    tryEnableWebPush({ app, db, userId }).catch((e) =>
-      console.warn("[Push] setup failed:", e?.message || e)
-    );
-  }
 
   const bell = document.createElement("button");
   bell.type = "button";

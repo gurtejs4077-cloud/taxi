@@ -47,7 +47,7 @@
   }
 
   /* ===== BUTTONS (VERY IMPORTANT) ===== */
-  button, .act-btn, .btn-bc, .btn-self, .btn-rej,
+  button:not(.tb), .act-btn, .btn-bc, .btn-self, .btn-rej,
   #btn-book, #btn-go, #btn-complete, .dis-btn{
     height: 56px !important;
     font-size: 17px !important;
@@ -296,6 +296,31 @@
       background: var(--red); animation: blink 1.4s ease infinite; display: none;
     }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+    /* Mobile: tabs scroll (overrides .tb flex:1 above); stats 3×2 instead of 6 squeezed columns */
+    @media (max-width: 768px) {
+      #stats {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+      }
+      #tabs {
+        flex-wrap: nowrap;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-x: contain;
+      }
+      #tabs .tb {
+        flex: 0 0 auto !important;
+        min-width: max-content !important;
+        padding: 12px 14px !important;
+        height: auto !important;
+        min-height: 44px;
+        letter-spacing: 0.02em !important;
+        font-size: 11px !important;
+      }
+      #tabs .tb .ndot {
+        right: 8px;
+      }
+    }
 
     /* ═══════════════════════════════════════════════
        PANELS

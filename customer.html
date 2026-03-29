@@ -102,6 +102,14 @@
     .rval{font-size:15px;font-weight:600;color:var(--text);margin-top:2px}
     .rsep{width:2px;height:13px;background:var(--border);margin-left:7px}
 
+    .driver-box{background:linear-gradient(145deg,rgba(16,185,129,.12),rgba(99,102,241,.08));border:1px solid rgba(16,185,129,.28);border-radius:13px;padding:14px;margin-bottom:13px}
+    .driver-box-h{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#6ee7b7;margin-bottom:10px}
+    .driver-phone{display:inline-flex;align-items:center;gap:8px;color:var(--green);font-size:16px;font-weight:700;text-decoration:none;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.35);border-radius:11px;padding:11px 14px;margin-bottom:10px;width:100%;box-sizing:border-box}
+    .driver-phone:active{background:rgba(16,185,129,.2)}
+    .driver-name{font-size:17px;font-weight:700;margin-bottom:8px;color:var(--text)}
+    .driver-car{font-size:14px;color:var(--sub);line-height:1.5}
+    .driver-car span{color:var(--text);font-weight:600}
+
     #btn-cancel{width:100%;background:transparent;border:1.5px solid var(--border);border-radius:13px;color:var(--sub);font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:600;padding:14px;cursor:pointer;transition:border-color .2s,color .2s}
     #btn-cancel:active{border-color:var(--red);color:var(--red)}
     #btn-cancel:disabled{opacity:.35;cursor:not-allowed}
@@ -247,7 +255,20 @@
       <div class="step" id="st3"><div class="sdot2">✅</div><div class="slbl">Done</div></div>
     </div>
     <div class="s-strip"><div class="sico" id="sico">⏳</div><div class="sinf"><div class="stit" id="stit">Finding a driver…</div><div class="ssub" id="ssub">Your request is with the admin</div></div><div class="sbdg sb-pending" id="sbdg">Pending</div></div>
-    <div class="sched-banner" id="sched-banner" style="display:none"><div class="ico">📅</div><div><div class="sdt" id="sched-dt">Scheduled ride</div><div class="ssb">Driver will be reminded 30 min before</div></div></div>
+    <div class="driver-box" id="driver-box" style="display:none">
+      <div class="driver-box-h">Your driver</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+        <div id="drv-photo-wrap" style="display:none">
+          <img id="drv-photo" src="" alt="Driver photo" style="width:54px;height:54px;border-radius:50%;object-fit:cover;border:2px solid rgba(16,185,129,.4);flex-shrink:0"/>
+        </div>
+        <div>
+          <div class="driver-name" id="drv-name">—</div>
+          <a class="driver-phone" id="drv-phone" href="#" style="display:none">📞 —</a>
+        </div>
+      </div>
+      <div class="driver-car" id="drv-car-wrap" style="display:none"></div>
+    </div>
+    <div class="sched-banner" id="sched-banner" style="display:none"><div class="ico">📅</div><div><div class="sdt" id="sched-dt">Scheduled ride</div><div class="ssb" id="ssb">Driver will be reminded 30 min before</div></div></div>
     <div class="rbox" id="airport-active-box" style="display:none">
       <div class="rrow"><div class="rico">✈️</div><div><div class="rlbl">Airport ride</div><div class="rval" id="a-airport-meta">—</div></div></div>
       <div class="rsep"></div>
@@ -577,6 +598,52 @@ async function book(){
     document.getElementById("sico").textContent=info.ico;
     document.getElementById("stit").textContent=info.tit;
     document.getElementById("ssub").textContent=info.sub;
+
+    const drvBox=document.getElementById("driver-box");
+    const showDrv=r.driverId && (r.status==="assigned"||r.status==="ongoing");
+    if(showDrv){
+      drvBox.style.display="block";
+      const dispName=(r.driverName&&String(r.driverName).trim())||(r.driverEmail&&String(r.driverEmail).trim())||"Driver";
+      document.getElementById("drv-name").textContent=dispName;
+
+      // Driver photo
+      const photoWrap=document.getElementById("drv-photo-wrap");
+      const photoImg=document.getElementById("drv-photo");
+      const photoURL=r.driverPhotoURL&&String(r.driverPhotoURL).trim();
+      if(photoURL){
+        photoImg.src=photoURL;
+        photoWrap.style.display="block";
+      }else{
+        photoWrap.style.display="none";
+      }
+      const ph=(r.driverPhone&&String(r.driverPhone).trim())||"";
+      const phEl=document.getElementById("drv-phone");
+      if(ph){
+        phEl.style.display="inline-flex";
+        phEl.href="tel:"+ph.replace(/\s/g,"");
+        phEl.textContent="📞 "+ph;
+      }else{
+        phEl.style.display="none";
+      }
+      const cm=(r.carModel&&String(r.carModel).trim())||"";
+      const cs=r.carSeats!=null&&r.carSeats!==""?String(r.carSeats).trim():"";
+      const cr=(r.carRegistration&&String(r.carRegistration).trim())||"";
+      const carWrap=document.getElementById("drv-car-wrap");
+      if(cm||cs||cr){
+        carWrap.style.display="block";
+        carWrap.innerHTML=[
+          cm?`<div>🚗 Model: <span>${cm}</span></div>`:"",
+          cs?`<div>💺 Seats: <span>${cs}</span></div>`:"",
+          cr?`<div>🔢 Registration: <span>${cr}</span></div>`:"",
+        ].filter(Boolean).join("");
+      }else{
+        carWrap.style.display="none";
+        carWrap.innerHTML="";
+      }
+    }else{
+      drvBox.style.display="none";
+    }
+
     const bdg=document.getElementById("sbdg");
     bdg.className="sbdg "+info.bdg;bdg.textContent=r.status;
     const banner=document.getElementById("sched-banner");

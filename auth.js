@@ -6,7 +6,7 @@
 //   email, name, phone, role, driverId, createdAt, approvedAt
 //
 // Firestore  drivers/{uid}  structure (drivers + admins who drive):
-//   email, name, phone, status, location, lastUpdated
+//   email, name, phone, carModel, carSeats, carRegistration, status, location, lastUpdated
 // ================================================================
 
 import { initializeApp }             from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -141,6 +141,9 @@ export async function promoteUser(targetUid, newRole, callerRole) {
       email:       userData.email  || "",
       name:        userData.name   || "",
       phone:       userData.phone  || "",
+      carModel:    "",
+      carSeats:    "",
+      carRegistration: "",
       status:      "offline",
       location:    null,
       fleetRole:   newRole === "admin" ? "admin" : "driver",

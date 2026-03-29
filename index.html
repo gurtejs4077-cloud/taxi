@@ -360,6 +360,15 @@
     .badge.available{background:rgba(16,185,129,.14);color:var(--green)}
     .badge.busy{background:rgba(245,158,11,.14);color:var(--orange)}
     .badge.offline{background:rgba(50,50,70,.5);color:var(--sub)}
+    .drv-stack{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:10px}
+    .drv-stack .drv-row{display:flex;align-items:center;gap:11px;cursor:pointer}
+    .drv-veh-row{margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+    .drv-veh-row .veh-t{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--sub);margin-bottom:6px}
+    .veh-mini{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .veh-mini .veh-full{grid-column:1/-1}
+    .veh-mini input{background:var(--bg);border:1.5px solid var(--border);border-radius:9px;color:var(--text);font-size:13px;padding:8px 10px;outline:none;width:100%;box-sizing:border-box}
+    .veh-mini input:focus{border-color:var(--accent)}
+    .btn-veh-s{margin-top:8px;font-size:12px;font-weight:700;padding:8px 12px;border-radius:9px;border:none;background:rgba(16,185,129,.18);color:var(--green);cursor:pointer;width:100%}
 
     /* ══ RIDE CARD ══ */
     .ride-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px;animation:up .25s ease}
@@ -530,6 +539,7 @@
 
 <script type="module">
 import { requireAuth, logoutUser, promoteUser, db } from "./auth.js";
+import { assignmentFieldsFromDriverDoc } from "./driver-profile.js";
 import { initMapSidebarSplit } from "./map-sidebar-split.js";
 import { initRideAppNotifications, createAppNotification } from "./notifications.js";
 import { pendingVisibleToAdmin } from "./ride-request-stages.js";
@@ -538,6 +548,8 @@ import {
   onSnapshot, query, where, orderBy, serverTimestamp,
   Timestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+import { app } from "./auth.js";
 
 const HISTORY_DAYS = 30;
 const historyCutoffTs = () => Timestamp.fromMillis(Date.now() - HISTORY_DAYS * 24 * 60 * 60 * 1000);
@@ -701,11 +713,88 @@ onSnapshot(collection(db, "drivers"), snap => {
       delete mkrs[id];
     }
 
-    const card = document.createElement("div"); card.className="drv-card";
+    const stack=document.createElement("div");stack.className="drv-stack";
+    const row=document.createElement("div");row.className="drv-row";
     const roleHint = fleetRole === "admin" ? ` <span style="font-size:11px;color:#c4b5fd">(Admin)</span>` : "";
-    card.innerHTML=`<div class="drv-av">${fleetRole === "admin" ? "👔" : "🧑"}</div><div class="drv-inf"><div class="drv-nm">${nm}${roleHint}</div><div class="drv-co">${loc?`${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}`:"No GPS"}</div></div><span class="badge ${st}">${st}</span>`;
-    card.addEventListener("click", ()=>{ if(loc) map.flyTo([loc.lat,loc.lng],16); });
-    list.appendChild(card);
+    const photoHTML = data.profilePhotoURL
+      ? `<img src="${data.profilePhotoURL}" alt="photo" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid rgba(16,185,129,.4);flex-shrink:0"/>`
+      : `<div class="drv-av">${fleetRole === "admin" ? "👔" : "🧑"}</div>`;
+    row.innerHTML=`${photoHTML}<div class="drv-inf"><div class="drv-nm">${nm}${roleHint}</div><div class="drv-co">${loc?`${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}`:"No GPS"}</div></div><span class="badge ${st}">${st}</span>`;
+    row.addEventListener("click", ()=>{ if(loc) map.flyTo([loc.lat,loc.lng],16); });
+    const veh=document.createElement("div");veh.className="drv-veh-row";
+    veh.innerHTML=`<div class="veh-t">Profile photo</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <div id="admin-photo-wrap-${id}">
+          ${data.profilePhotoURL
+            ? `<img src="${data.profilePhotoURL}" alt="photo" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid rgba(99,102,241,.4)"/>`
+            : `<div style="width:52px;height:52px;border-radius:50%;background:rgba(99,102,241,.12);border:2px dashed rgba(99,102,241,.35);display:flex;align-items:center;justify-content:center;font-size:22px">👤</div>`
+          }
+        </div>
+        <div>
+          <label style="display:inline-block;cursor:pointer;background:rgba(99,102,241,.18);color:#a5b4fc;border:1px solid rgba(99,102,241,.35);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600">
+            📷 Change photo
+            <input type="file" class="v-photo-input" accept="image/*" style="display:none"/>
+          </label>
+          <div class="v-photo-msg" style="font-size:11px;color:var(--sub);margin-top:4px"></div>
+        </div>
+      </div>
+      <div class="veh-t" style="margin-top:4px">Vehicle (customer sees this after dispatch)</div>
+      <div class="veh-mini">
+        <input type="text" class="v-mod" placeholder="Model" value="${(data.carModel||"").replace(/"/g,"&quot;")}"/>
+        <input type="number" class="v-seat" min="1" max="99" placeholder="Seats" value="${data.carSeats!=null&&data.carSeats!==""?String(data.carSeats):""}"/>
+        <input type="text" class="v-reg veh-full" placeholder="Registration" value="${(data.carRegistration||"").replace(/"/g,"&quot;")}"/>
+      </div>
+      <button type="button" class="btn-veh-s">Save profile &amp; vehicle</button>`;
+    veh.addEventListener("click", e => e.stopPropagation());
+
+    // Photo preview on select
+    const photoInput = veh.querySelector(".v-photo-input");
+    const photoMsgEl = veh.querySelector(".v-photo-msg");
+    let _pendingPhoto = null;
+    photoInput.addEventListener("change", e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (file.size > 5 * 1024 * 1024) { photoMsgEl.textContent = "Max 5 MB."; return; }
+      _pendingPhoto = file;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        document.getElementById(`admin-photo-wrap-${id}`).innerHTML = `<img src="${ev.target.result}" alt="photo" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid rgba(99,102,241,.4)"/>`;
+      };
+      reader.readAsDataURL(file);
+      photoMsgEl.textContent = "Selected — press Save to upload.";
+    });
+
+    veh.querySelector(".btn-veh-s").addEventListener("click", async e => {
+      e.stopPropagation();
+      const btn = veh.querySelector(".btn-veh-s");
+      btn.disabled = true;
+      const carModel = veh.querySelector(".v-mod").value.trim();
+      const seatsRaw = veh.querySelector(".v-seat").value.trim();
+      const carRegistration = veh.querySelector(".v-reg").value.trim();
+      let carSeats = "";
+      if (seatsRaw !== "") {
+        const n = Number(seatsRaw);
+        carSeats = Number.isFinite(n) ? n : seatsRaw;
+      }
+      try {
+        const updates = { carModel, carSeats, carRegistration, lastUpdated: serverTimestamp() };
+        if (_pendingPhoto) {
+          photoMsgEl.textContent = "Uploading…";
+          const storage = getStorage(app);
+          const pRef = storageRef(storage, `profile_photos/${id}`);
+          await uploadBytes(pRef, _pendingPhoto);
+          updates.profilePhotoURL = await getDownloadURL(pRef);
+          _pendingPhoto = null;
+          photoMsgEl.textContent = "Photo uploaded ✓";
+        }
+        await setDoc(doc(db, "drivers", id), updates, { merge: true });
+        toast("Saved", "var(--green)");
+      } catch (err) { toast("❌ " + (err.message || "Save failed"), "var(--red)"); }
+      finally { btn.disabled = false; }
+    });
+    stack.appendChild(row);
+    stack.appendChild(veh);
+    list.appendChild(stack);
   });
   upStats();
 });
@@ -899,6 +988,8 @@ onSnapshot(
         const btn=card.querySelector(".btn-self");
         btn.disabled=true;btn.textContent="Accepting…";
         try{
+          const dSnap=await getDoc(doc(db,"drivers",user.uid));
+          const afSelf=assignmentFieldsFromDriverDoc(dSnap.data(),{name,email,phone});
           const rideRef=await addDoc(collection(db,"rides"),{
             pickup:r.pickup,drop:r.drop,
             status:"ongoing",driverId:"admin",driverEmail:email||"admin",
@@ -907,8 +998,9 @@ onSnapshot(
             isScheduled:r.isScheduled||false,scheduledAt:r.scheduledAt||null,
             ...rideAirportFields(r),
             createdAt:serverTimestamp(),
+            ...afSelf,
           });
-          await updateDoc(doc(db,"ride_requests",rId),{status:"ongoing",driverId:"admin",driverEmail:email||"admin",rideId:rideRef.id});
+          await updateDoc(doc(db,"ride_requests",rId),{status:"ongoing",driverId:"admin",driverEmail:email||"admin",rideId:rideRef.id,...afSelf});
           if(r.customerId){
             try{
               await createAppNotification(db,{
@@ -957,7 +1049,8 @@ document.getElementById("btn-create").addEventListener("click",async()=>{
       toast("No drivers — ride queued","var(--orange)");
     }else{
       const dd=snap.docs[0],did=dd.id,ddata=dd.data();
-      await setDoc(ref,{pickup,drop,status:"assigned",driverId:did,driverEmail:ddata.email||did,customerPhone:"",customerName:"",createdAt:serverTimestamp()});
+      const afManual=assignmentFieldsFromDriverDoc(ddata,{});
+      await setDoc(ref,{pickup,drop,status:"assigned",driverId:did,driverEmail:ddata.email||did,customerPhone:"",customerName:"",createdAt:serverTimestamp(),...afManual});
       await setDoc(doc(db,"drivers",did),{status:"busy"},{merge:true});
       try {
         await createAppNotification(db, {
